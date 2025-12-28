@@ -1,0 +1,59 @@
+{
+  "version": "1.0",
+  "name": "My Skatepark",
+  "objects": [
+    {
+      "type": "quarter-pipe",
+      "name": "Quarter Pipe",
+      "position": {
+        "x": -7.5,
+        "y": 0,
+        "z": 5
+      },
+      "rotation": {
+        "y": 0
+      },
+      "scale": 1
+    },
+    {
+      "type": "quarter-pipe",
+      "name": "Quarter Pipe",
+      "position": {
+        "x": 1,
+        "y": 0,
+        "z": -3
+      },
+      "rotation": {
+        "y": 0
+      },
+      "scale": 1
+    },
+    {
+      "type": "quarter-pipe",
+      "name": "Quarter Pipe",
+      "position": {
+        "x": 1.5,
+        "y": 0,
+        "z": -8.5
+      },
+      "rotation": {
+        "y": 0
+      },
+      "scale": 1
+    },
+    {
+      "type": "pyramid",
+      "name": "Pyramid",
+      "position": {
+        "x": -8.5,
+        "y": 0,
+        "z": -3
+      },
+      "rotation": {
+        "y": 0
+      },
+      "scale": 1
+    }
+  ]
+}
+

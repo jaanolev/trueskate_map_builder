@@ -1,0 +1,3 @@
+Add the following texture files to this folder:
+- concrete_gray.jpg (gray concrete texture)
+- sky_top.jpg, sky_front.jpg, sky_back.jpg, sky_left.jpg, sky_right.jpg (skybox)
