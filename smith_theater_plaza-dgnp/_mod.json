@@ -1,0 +1,65 @@
+"modWorldInfo":
+{
+	"name":"Macba Mod",
+	"fileName":"MacbaMod.txt"
+	"startPositions":
+	[
+			"startPosition":
+			{ 
+				"x":-35.52, 
+				"y":-2.553, 
+				"z":6.219
+				"angle":90.0
+			}
+			"startPosition":
+			{ 
+				"x":84.43, 
+				"y":-88.85, 
+				"z":2.964
+				"angle":0.0
+			}
+			"startPosition":
+			{ 
+				"x":84.92, 
+				"y":7.526, 
+				"z":4.166
+				"angle":270.0
+			}
+			"startPosition":
+			{ 
+				"x":76.9, 
+				"y":-21.79, 
+				"z":6.373
+				"angle":0.0
+			}
+			"startPosition":
+			{ 
+				"x":-7.037, 
+				"y":-19.94, 
+				"z":10.37
+				"angle":0.0
+			}
+			
+	],
+	"skyBoxUp":"CM_top.jpg"
+	"skyBoxForward":"CM_1.jpg"
+	"skyBoxBack":"CM_3.jpg"
+	"skyBoxLeft":"CM_4.jpg"
+	"skyBoxRight":"CM_2.jpg"
+
+	"specularBoxUp":"skatepark01spec_03.jpg"
+	"specularBoxForward":"skatepark01spec_05.jpg"
+	"specularBoxBack":"skatepark01spec_06.jpg"
+	"specularBoxLeft":"skatepark01spec_02.jpg"
+	"specularBoxRight":"skatepark01spec_01.jpg"
+	"specularBoxDown":"skatepark01spec_04.jpg"
+
+
+	"skyAngle":95.0
+	"gamma":1.1
+
+	"colorBackground": { "r": 0.0, "g": 0.0, "b": 0.0 },
+	"colorLightingDirect": { "r": 0.5, "g": 0.5, "b": 1.0},
+	"colorLightingAmbient": { "r": 0.5, "g": 0.5, "b": 0.0},
+	"lightDirection": { "x": 042.37, "y": 96.2, "z":220.4 }
+}

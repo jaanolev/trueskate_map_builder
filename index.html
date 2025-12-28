@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>True Skate Map Maker</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Top Bar -->
+        <header id="top-bar">
+            <h1>TRUE SKATE MAP MAKER</h1>
+            <div class="header-actions">
+                <button id="btn-new" class="btn-header">NEW</button>
+                <button id="btn-export" class="btn-header btn-primary">EXPORT</button>
+            </div>
+        </header>
+
+        <!-- Left Sidebar - Object Palette -->
+        <aside id="object-palette">
+            <h2>OBJECTS</h2>
+            <div class="palette-section">
+                <h3>Ground</h3>
+                <div class="palette-grid">
+                    <button class="palette-item" data-object="ground-flat">
+                        <div class="palette-icon">▬</div>
+                        <span>Flat</span>
+                    </button>
+                    <button class="palette-item" data-object="ground-slope">
+                        <div class="palette-icon">◢</div>
+                        <span>Slope</span>
+                    </button>
+                </div>
+            </div>
+            <div class="palette-section">
+                <h3>Ramps</h3>
+                <div class="palette-grid">
+                    <button class="palette-item" data-object="quarter-pipe">
+                        <div class="palette-icon">◠</div>
+                        <span>Quarter</span>
+                    </button>
+                    <button class="palette-item" data-object="half-pipe">
+                        <div class="palette-icon">◡◠</div>
+                        <span>Half Pipe</span>
+                    </button>
+                    <button class="palette-item" data-object="kicker">
+                        <div class="palette-icon">⟋</div>
+                        <span>Kicker</span>
+                    </button>
+                    <button class="palette-item" data-object="pyramid">
+                        <div class="palette-icon">△</div>
+                        <span>Pyramid</span>
+                    </button>
+                </div>
+            </div>
+            <div class="palette-section">
+                <h3>Rails & Ledges</h3>
+                <div class="palette-grid">
+                    <button class="palette-item" data-object="rail-flat">
+                        <div class="palette-icon">━</div>
+                        <span>Flat Rail</span>
+                    </button>
+                    <button class="palette-item" data-object="rail-down">
+                        <div class="palette-icon">╲</div>
+                        <span>Down Rail</span>
+                    </button>
+                    <button class="palette-item" data-object="ledge">
+                        <div class="palette-icon">▭</div>
+                        <span>Ledge</span>
+                    </button>
+                    <button class="palette-item" data-object="manual-pad">
+                        <div class="palette-icon">▯</div>
+                        <span>Manny Pad</span>
+                    </button>
+                </div>
+            </div>
+            <div class="palette-section">
+                <h3>Stairs</h3>
+                <div class="palette-grid">
+                    <button class="palette-item" data-object="stairs-3">
+                        <div class="palette-icon">⊏</div>
+                        <span>3 Stair</span>
+                    </button>
+                    <button class="palette-item" data-object="stairs-5">
+                        <div class="palette-icon">⊐</div>
+                        <span>5 Stair</span>
+                    </button>
+                    <button class="palette-item" data-object="stairs-hubba">
+                        <div class="palette-icon">⧈</div>
+                        <span>Hubba</span>
+                    </button>
+                </div>
+            </div>
+            <div class="palette-section">
+                <h3>Props</h3>
+                <div class="palette-grid">
+                    <button class="palette-item" data-object="bench">
+                        <div class="palette-icon">⌂</div>
+                        <span>Bench</span>
+                    </button>
+                    <button class="palette-item" data-object="trash-can">
+                        <div class="palette-icon">⌧</div>
+                        <span>Trash Can</span>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main 3D Viewport -->
+        <main id="viewport">
+            <canvas id="canvas"></canvas>
+            <div id="viewport-controls">
+                <span class="control-hint">🖱️ Left: Rotate</span>
+                <span class="control-hint">🖱️ Right: Pan</span>
+                <span class="control-hint">⚙️ Scroll: Zoom</span>
+            </div>
+        </main>
+
+        <!-- Right Sidebar - Properties -->
+        <aside id="properties-panel">
+            <h2>PROPERTIES</h2>
+            <div id="no-selection">
+                <p>Select an object to edit its properties</p>
+            </div>
+            <div id="object-properties" class="hidden">
+                <div class="property-group">
+                    <label>Position</label>
+                    <div class="property-row">
+                        <span class="axis x">X</span>
+                        <input type="number" id="pos-x" step="0.1">
+                    </div>
+                    <div class="property-row">
+                        <span class="axis y">Y</span>
+                        <input type="number" id="pos-y" step="0.1">
+                    </div>
+                    <div class="property-row">
+                        <span class="axis z">Z</span>
+                        <input type="number" id="pos-z" step="0.1">
+                    </div>
+                </div>
+                <div class="property-group">
+                    <label>Rotation</label>
+                    <div class="property-row">
+                        <span class="axis y">Y°</span>
+                        <input type="number" id="rot-y" step="15">
+                    </div>
+                </div>
+                <div class="property-group">
+                    <label>Scale</label>
+                    <div class="property-row">
+                        <input type="range" id="scale" min="0.5" max="3" step="0.1" value="1">
+                        <span id="scale-value">1.0x</span>
+                    </div>
+                </div>
+                <div class="property-group">
+                    <button id="btn-delete" class="btn-danger">DELETE OBJECT</button>
+                    <button id="btn-duplicate" class="btn-secondary">DUPLICATE</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Bottom Status Bar -->
+        <footer id="status-bar">
+            <span id="object-count">Objects: 0</span>
+            <span id="cursor-pos">X: 0.0 | Y: 0.0 | Z: 0.0</span>
+            <span id="mode-indicator">MODE: SELECT</span>
+        </footer>
+    </div>
+
+    <!-- Import maps for ES modules -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>
+
