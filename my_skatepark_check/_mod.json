@@ -1,0 +1,42 @@
+"modWorldInfo":
+{
+	"name":"My Skatepark",
+	"fileName":"my_skatepark.txt"
+	"startPositions":
+	[
+			"startPosition":
+			{ 
+				"x":0.0, 
+				"y":0.0, 
+				"z":5.0
+				"angle":0.0
+			}
+			"startPosition":
+			{ 
+				"x":10.0, 
+				"y":0.0, 
+				"z":0.0
+				"angle":90.0
+			}
+	],
+	"skyBoxUp":"sky_top.jpg"
+	"skyBoxForward":"sky_front.jpg"
+	"skyBoxBack":"sky_back.jpg"
+	"skyBoxLeft":"sky_left.jpg"
+	"skyBoxRight":"sky_right.jpg"
+
+	"specularBoxUp":"sky_top.jpg"
+	"specularBoxForward":"sky_front.jpg"
+	"specularBoxBack":"sky_back.jpg"
+	"specularBoxLeft":"sky_left.jpg"
+	"specularBoxRight":"sky_right.jpg"
+	"specularBoxDown":"sky_bottom.jpg"
+
+	"skyAngle":90.0
+	"gamma":1.0
+
+	"colorBackground": { "r": 0.5, "g": 0.7, "b": 1.0 },
+	"colorLightingDirect": { "r": 1.0, "g": 0.95, "b": 0.9},
+	"colorLightingAmbient": { "r": 0.4, "g": 0.45, "b": 0.5},
+	"lightDirection": { "x": 45.0, "y": 60.0, "z":180.0 }
+}

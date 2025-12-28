@@ -1188,14 +1188,16 @@ function generateTrueSkateGeometryFile(meshes) {
         lines.push('0 #Texture index', '0', '0');
     }
     
-    // Total vertices
+    // Total vertices and mesh count
     const totalVerts = meshes.reduce((sum, m) => sum + m.vertices.length, 0);
     lines.push(`${totalVerts} #Num Vertices`);
+    lines.push(`${meshes.length}`);  // Number of meshes
     
-    // Mesh headers
+    // Mesh headers - #Mesh comes BEFORE each mesh's data
     for (const mesh of meshes) {
+        lines.push('#Mesh');
         lines.push(`${mesh.indices.length} #Num Indices`, `${mesh.vertices.length} #Num Vertices`);
-        lines.push('#Normals (Flags |= 0x1)', '1 #Flags', '2 #Num Colour Sets', '2 #Num Uv Sets', '#Mesh');
+        lines.push('#Normals (Flags |= 0x1)', '1 #Flags', '2 #Num Colour Sets', '2 #Num Uv Sets');
     }
     
     // Vertex data
