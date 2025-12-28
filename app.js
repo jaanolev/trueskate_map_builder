@@ -815,45 +815,558 @@ function updateSelectedScale() {
 }
 
 // ========================================
-// EXPORT
+// TRUE SKATE FORMAT EXPORT
 // ========================================
 
-function exportToTrueSkate() {
+// Geometry generators for True Skate format
+const TS_SCALE = 100.0; // True Skate uses larger coordinates
+
+function generateBoxGeometry(width, height, depth, offsetX = 0, offsetY = 0, offsetZ = 0) {
+    const hw = width / 2, hh = height / 2, hd = depth / 2;
+    const vertices = [];
+    const indices = [];
+    
+    // 8 corners
+    const corners = [
+        [-hw + offsetX, -hh + offsetY, -hd + offsetZ],
+        [hw + offsetX, -hh + offsetY, -hd + offsetZ],
+        [hw + offsetX, hh + offsetY, -hd + offsetZ],
+        [-hw + offsetX, hh + offsetY, -hd + offsetZ],
+        [-hw + offsetX, -hh + offsetY, hd + offsetZ],
+        [hw + offsetX, -hh + offsetY, hd + offsetZ],
+        [hw + offsetX, hh + offsetY, hd + offsetZ],
+        [-hw + offsetX, hh + offsetY, hd + offsetZ],
+    ];
+    
+    // Faces with normals
+    const faces = [
+        [[0, 1, 2, 3], [0, 0, -1]],
+        [[5, 4, 7, 6], [0, 0, 1]],
+        [[4, 0, 3, 7], [-1, 0, 0]],
+        [[1, 5, 6, 2], [1, 0, 0]],
+        [[3, 2, 6, 7], [0, 1, 0]],
+        [[4, 5, 1, 0], [0, -1, 0]],
+    ];
+    
+    for (const [faceCorners, normal] of faces) {
+        const base = vertices.length;
+        for (let i = 0; i < 4; i++) {
+            const c = corners[faceCorners[i]];
+            vertices.push({
+                x: c[0], y: c[1], z: c[2],
+                nx: normal[0], ny: normal[1], nz: normal[2],
+                u: (i === 1 || i === 2) ? 1 : 0,
+                v: (i === 2 || i === 3) ? 1 : 0
+            });
+        }
+        indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    }
+    
+    return { vertices, indices };
+}
+
+function generateQuarterPipeGeometry(radius = 3.0, width = 6.0, segments = 12) {
+    const vertices = [];
+    const indices = [];
+    
+    // Curved surface
+    for (let i = 0; i <= segments; i++) {
+        const angle = (Math.PI / 2) * (i / segments);
+        const x = radius * (1 - Math.cos(angle));
+        const y = radius * Math.sin(angle);
+        const nx = -Math.cos(angle);
+        const ny = Math.sin(angle);
+        
+        vertices.push({
+            x: x - radius, y: y, z: -width / 2,
+            nx: nx, ny: ny, nz: 0,
+            u: i / segments, v: 0
+        });
+        vertices.push({
+            x: x - radius, y: y, z: width / 2,
+            nx: nx, ny: ny, nz: 0,
+            u: i / segments, v: 1
+        });
+    }
+    
+    for (let i = 0; i < segments; i++) {
+        const base = i * 2;
+        indices.push(base, base + 2, base + 3, base, base + 3, base + 1);
+    }
+    
+    // Side panels
+    const sideStart = vertices.length;
+    for (let i = 0; i <= segments; i++) {
+        const angle = (Math.PI / 2) * (i / segments);
+        const x = radius * (1 - Math.cos(angle));
+        const y = radius * Math.sin(angle);
+        vertices.push({ x: x - radius, y: y, z: -width / 2, nx: 0, ny: 0, nz: -1, u: x / radius, v: y / radius });
+    }
+    vertices.push({ x: -radius, y: 0, z: -width / 2, nx: 0, ny: 0, nz: -1, u: 0, v: 0 });
+    const bottomLeft = vertices.length - 1;
+    for (let i = 0; i < segments; i++) {
+        indices.push(bottomLeft, sideStart + i, sideStart + i + 1);
+    }
+    
+    const rightStart = vertices.length;
+    for (let i = 0; i <= segments; i++) {
+        const angle = (Math.PI / 2) * (i / segments);
+        const x = radius * (1 - Math.cos(angle));
+        const y = radius * Math.sin(angle);
+        vertices.push({ x: x - radius, y: y, z: width / 2, nx: 0, ny: 0, nz: 1, u: x / radius, v: y / radius });
+    }
+    vertices.push({ x: -radius, y: 0, z: width / 2, nx: 0, ny: 0, nz: 1, u: 0, v: 0 });
+    const bottomRight = vertices.length - 1;
+    for (let i = 0; i < segments; i++) {
+        indices.push(bottomRight, rightStart + i + 1, rightStart + i);
+    }
+    
+    return { vertices, indices };
+}
+
+function generatePyramidGeometry(baseRadius = 3.0, height = 2.0) {
+    const vertices = [];
+    const indices = [];
+    
+    const corners = [
+        [-baseRadius, 0, -baseRadius],
+        [baseRadius, 0, -baseRadius],
+        [baseRadius, 0, baseRadius],
+        [-baseRadius, 0, baseRadius],
+    ];
+    const apex = [0, height, 0];
+    
+    const calcNormal = (p1, p2, p3) => {
+        const ax = p2[0] - p1[0], ay = p2[1] - p1[1], az = p2[2] - p1[2];
+        const bx = p3[0] - p1[0], by = p3[1] - p1[1], bz = p3[2] - p1[2];
+        const nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx;
+        const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+        return len > 0 ? [nx / len, ny / len, nz / len] : [0, 1, 0];
+    };
+    
+    const faces = [[0, 1], [1, 2], [2, 3], [3, 0]];
+    for (const [c1, c2] of faces) {
+        const p1 = corners[c1], p2 = corners[c2], p3 = apex;
+        const normal = calcNormal(p1, p2, p3);
+        const base = vertices.length;
+        vertices.push({ x: p1[0], y: p1[1], z: p1[2], nx: normal[0], ny: normal[1], nz: normal[2], u: 0, v: 0 });
+        vertices.push({ x: p2[0], y: p2[1], z: p2[2], nx: normal[0], ny: normal[1], nz: normal[2], u: 1, v: 0 });
+        vertices.push({ x: p3[0], y: p3[1], z: p3[2], nx: normal[0], ny: normal[1], nz: normal[2], u: 0.5, v: 1 });
+        indices.push(base, base + 1, base + 2);
+    }
+    
+    // Bottom
+    const base = vertices.length;
+    for (const c of corners) {
+        vertices.push({ x: c[0], y: c[1], z: c[2], nx: 0, ny: -1, nz: 0, u: (c[0] + baseRadius) / (2 * baseRadius), v: (c[2] + baseRadius) / (2 * baseRadius) });
+    }
+    indices.push(base, base + 2, base + 1, base, base + 3, base + 2);
+    
+    return { vertices, indices };
+}
+
+function generateStairsGeometry(numSteps = 3, stepHeight = 0.4, stepDepth = 1.0, stepWidth = 3.0) {
+    const allVertices = [];
+    const allIndices = [];
+    
+    for (let i = 0; i < numSteps; i++) {
+        const box = generateBoxGeometry(stepWidth, stepHeight, stepDepth, 0, stepHeight * (i + 0.5), -stepDepth * i);
+        const baseIdx = allVertices.length;
+        allVertices.push(...box.vertices);
+        allIndices.push(...box.indices.map(idx => idx + baseIdx));
+    }
+    
+    return { vertices: allVertices, indices: allIndices };
+}
+
+function generateRailGeometry(length = 6.0, height = 0.8, radius = 0.08) {
+    const vertices = [];
+    const indices = [];
+    const segments = 8;
+    
+    // Main rail
+    for (let i = 0; i < segments; i++) {
+        const angle1 = 2 * Math.PI * i / segments;
+        const angle2 = 2 * Math.PI * (i + 1) / segments;
+        const y1 = height + radius * Math.cos(angle1);
+        const z1 = radius * Math.sin(angle1);
+        const y2 = height + radius * Math.cos(angle2);
+        const z2 = radius * Math.sin(angle2);
+        
+        const base = vertices.length;
+        vertices.push({ x: -length / 2, y: y1, z: z1, nx: 0, ny: Math.cos(angle1), nz: Math.sin(angle1), u: 0, v: i / segments });
+        vertices.push({ x: -length / 2, y: y2, z: z2, nx: 0, ny: Math.cos(angle2), nz: Math.sin(angle2), u: 0, v: (i + 1) / segments });
+        vertices.push({ x: length / 2, y: y1, z: z1, nx: 0, ny: Math.cos(angle1), nz: Math.sin(angle1), u: 1, v: i / segments });
+        vertices.push({ x: length / 2, y: y2, z: z2, nx: 0, ny: Math.cos(angle2), nz: Math.sin(angle2), u: 1, v: (i + 1) / segments });
+        indices.push(base, base + 1, base + 3, base, base + 3, base + 2);
+    }
+    
+    return { vertices, indices };
+}
+
+function generateLedgeGeometry(length = 5.0, height = 0.6, depth = 0.8) {
+    return generateBoxGeometry(length, height, depth, 0, height / 2, 0);
+}
+
+function generateKickerGeometry(length = 2.0, height = 1.5, width = 3.0) {
+    const vertices = [];
+    const indices = [];
+    const segments = 8;
+    
+    for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const x = (1 - t) * (1 - t) * 0 + 2 * (1 - t) * t * (length * 0.75) + t * t * length;
+        const y = t * t * height;
+        const dx = 2 * (1 - t) * (length * 0.75) + 2 * t * (length - length * 0.75);
+        const dy = 2 * t * height;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const nx = len > 0 ? -dy / len : 0;
+        const ny = len > 0 ? dx / len : 1;
+        
+        vertices.push({ x: x, y: y, z: -width / 2, nx: nx, ny: ny, nz: 0, u: t, v: 0 });
+        vertices.push({ x: x, y: y, z: width / 2, nx: nx, ny: ny, nz: 0, u: t, v: 1 });
+    }
+    
+    for (let i = 0; i < segments; i++) {
+        const base = i * 2;
+        indices.push(base, base + 2, base + 3, base, base + 3, base + 1);
+    }
+    
+    // Bottom and back faces
+    let base = vertices.length;
+    vertices.push({ x: 0, y: 0, z: -width / 2, nx: 0, ny: -1, nz: 0, u: 0, v: 0 });
+    vertices.push({ x: 0, y: 0, z: width / 2, nx: 0, ny: -1, nz: 0, u: 0, v: 1 });
+    vertices.push({ x: length, y: 0, z: width / 2, nx: 0, ny: -1, nz: 0, u: 1, v: 1 });
+    vertices.push({ x: length, y: 0, z: -width / 2, nx: 0, ny: -1, nz: 0, u: 1, v: 0 });
+    indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    
+    base = vertices.length;
+    vertices.push({ x: length, y: 0, z: -width / 2, nx: 1, ny: 0, nz: 0, u: 0, v: 0 });
+    vertices.push({ x: length, y: 0, z: width / 2, nx: 1, ny: 0, nz: 0, u: 1, v: 0 });
+    vertices.push({ x: length, y: height, z: width / 2, nx: 1, ny: 0, nz: 0, u: 1, v: 1 });
+    vertices.push({ x: length, y: height, z: -width / 2, nx: 1, ny: 0, nz: 0, u: 0, v: 1 });
+    indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    
+    return { vertices, indices };
+}
+
+function generateGroundGeometry(size = 50.0) {
+    return generateBoxGeometry(size, 0.5, size, 0, -0.25, 0);
+}
+
+function generateSlopeGeometry(length = 5.0, height = 2.0, width = 5.0) {
+    const vertices = [];
+    const indices = [];
+    
+    // Top surface
+    vertices.push({ x: 0, y: 0, z: -width / 2, nx: 0, ny: 0.894, nz: -0.447, u: 0, v: 0 });
+    vertices.push({ x: 0, y: 0, z: width / 2, nx: 0, ny: 0.894, nz: -0.447, u: 0, v: 1 });
+    vertices.push({ x: length, y: height, z: width / 2, nx: 0, ny: 0.894, nz: -0.447, u: 1, v: 1 });
+    vertices.push({ x: length, y: height, z: -width / 2, nx: 0, ny: 0.894, nz: -0.447, u: 1, v: 0 });
+    indices.push(0, 1, 2, 0, 2, 3);
+    
+    // Bottom
+    let base = vertices.length;
+    vertices.push({ x: 0, y: 0, z: -width / 2, nx: 0, ny: -1, nz: 0, u: 0, v: 0 });
+    vertices.push({ x: 0, y: 0, z: width / 2, nx: 0, ny: -1, nz: 0, u: 0, v: 1 });
+    vertices.push({ x: length, y: 0, z: width / 2, nx: 0, ny: -1, nz: 0, u: 1, v: 1 });
+    vertices.push({ x: length, y: 0, z: -width / 2, nx: 0, ny: -1, nz: 0, u: 1, v: 0 });
+    indices.push(base, base + 2, base + 1, base, base + 3, base + 2);
+    
+    // Back
+    base = vertices.length;
+    vertices.push({ x: length, y: 0, z: -width / 2, nx: 1, ny: 0, nz: 0, u: 0, v: 0 });
+    vertices.push({ x: length, y: 0, z: width / 2, nx: 1, ny: 0, nz: 0, u: 1, v: 0 });
+    vertices.push({ x: length, y: height, z: width / 2, nx: 1, ny: 0, nz: 0, u: 1, v: 1 });
+    vertices.push({ x: length, y: height, z: -width / 2, nx: 1, ny: 0, nz: 0, u: 0, v: 1 });
+    indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    
+    // Sides
+    base = vertices.length;
+    vertices.push({ x: 0, y: 0, z: -width / 2, nx: 0, ny: 0, nz: -1, u: 0, v: 0 });
+    vertices.push({ x: length, y: 0, z: -width / 2, nx: 0, ny: 0, nz: -1, u: 1, v: 0 });
+    vertices.push({ x: length, y: height, z: -width / 2, nx: 0, ny: 0, nz: -1, u: 1, v: 1 });
+    indices.push(base, base + 1, base + 2);
+    
+    base = vertices.length;
+    vertices.push({ x: 0, y: 0, z: width / 2, nx: 0, ny: 0, nz: 1, u: 0, v: 0 });
+    vertices.push({ x: length, y: height, z: width / 2, nx: 0, ny: 0, nz: 1, u: 1, v: 1 });
+    vertices.push({ x: length, y: 0, z: width / 2, nx: 0, ny: 0, nz: 1, u: 1, v: 0 });
+    indices.push(base, base + 1, base + 2);
+    
+    return { vertices, indices };
+}
+
+function generateManualPadGeometry() {
+    return generateBoxGeometry(4, 0.3, 2, 0, 0.15, 0);
+}
+
+function generateBenchGeometry() {
+    const allVertices = [];
+    const allIndices = [];
+    
+    // Seat
+    const seat = generateBoxGeometry(2.0, 0.1, 0.5, 0, 0.5, 0);
+    allVertices.push(...seat.vertices);
+    allIndices.push(...seat.indices);
+    
+    // Legs
+    for (const xOff of [-0.8, 0.8]) {
+        const base = allVertices.length;
+        const leg = generateBoxGeometry(0.1, 0.5, 0.5, xOff, 0.25, 0);
+        allVertices.push(...leg.vertices);
+        allIndices.push(...leg.indices.map(i => i + base));
+    }
+    
+    return { vertices: allVertices, indices: allIndices };
+}
+
+function generateTrashCanGeometry() {
+    return generateBoxGeometry(0.6, 0.8, 0.6, 0, 0.4, 0);
+}
+
+const GEOMETRY_GENERATORS = {
+    'ground-flat': generateGroundGeometry,
+    'ground-slope': generateSlopeGeometry,
+    'quarter-pipe': generateQuarterPipeGeometry,
+    'half-pipe': generateQuarterPipeGeometry,
+    'kicker': generateKickerGeometry,
+    'pyramid': generatePyramidGeometry,
+    'rail-flat': generateRailGeometry,
+    'rail-down': generateRailGeometry,
+    'ledge': generateLedgeGeometry,
+    'manual-pad': generateManualPadGeometry,
+    'stairs-3': () => generateStairsGeometry(3),
+    'stairs-5': () => generateStairsGeometry(5),
+    'stairs-hubba': () => generateStairsGeometry(4),
+    'bench': generateBenchGeometry,
+    'trash-can': generateTrashCanGeometry,
+};
+
+function transformVertex(v, pos, rotY, scale) {
+    let x = v.x * scale;
+    let y = v.y * scale;
+    let z = v.z * scale;
+    
+    const cos = Math.cos(rotY);
+    const sin = Math.sin(rotY);
+    const newX = x * cos - z * sin;
+    const newZ = x * sin + z * cos;
+    const newNx = v.nx * cos - v.nz * sin;
+    const newNz = v.nx * sin + v.nz * cos;
+    
+    return {
+        x: (newX + pos.x) * TS_SCALE,
+        y: (y + pos.y) * TS_SCALE,
+        z: (newZ + pos.z) * TS_SCALE,
+        nx: newNx, ny: v.ny, nz: newNz,
+        u: v.u, v: v.v
+    };
+}
+
+function generateTrueSkateGeometryFile(meshes) {
+    const lines = [];
+    
+    // Header
+    lines.push('84', '65', '83', '75', '1003 #Version', '<VIS ', '17');
+    
+    // Textures
+    lines.push('1 #Num Textures', 'concrete_gray');
+    
+    // Materials
+    const materials = [
+        [128, 128, 130], [100, 100, 105], [85, 85, 90],
+        [180, 180, 180], [136, 85, 51], [139, 69, 19]
+    ];
+    lines.push(`${materials.length} #Num Materials`);
+    
+    for (const [r, g, b] of materials) {
+        lines.push('#Material', '1 #Material Type (Solid)', '#Color', String(r), String(g), String(b), '255');
+        lines.push('1.000000 #Specular', '5.000000 #G Blend Sharpness', '0.800000 #G Blend Level', '0.500000 #G Blend Mode');
+        lines.push('#G Shadow Color', '180', '180', '180', '255');
+        lines.push('#G Highlight Color', '255', '255', '255', '255');
+        lines.push('0 #Texture index', '0', '0');
+    }
+    
+    // Total vertices
+    const totalVerts = meshes.reduce((sum, m) => sum + m.vertices.length, 0);
+    lines.push(`${totalVerts} #Num Vertices`);
+    
+    // Mesh headers
+    for (const mesh of meshes) {
+        lines.push(`${mesh.indices.length} #Num Indices`, `${mesh.vertices.length} #Num Vertices`);
+        lines.push('#Normals (Flags |= 0x1)', '1 #Flags', '2 #Num Colour Sets', '2 #Num Uv Sets', '#Mesh');
+    }
+    
+    // Vertex data
+    for (const mesh of meshes) {
+        for (const v of mesh.vertices) {
+            lines.push(v.nx.toFixed(6), v.ny.toFixed(6), v.nz.toFixed(6));
+            lines.push(v.x.toFixed(6), v.y.toFixed(6), v.z.toFixed(6));
+            lines.push(v.u.toFixed(6), v.v.toFixed(6), v.u.toFixed(6), v.v.toFixed(6));
+            lines.push('255', '255', '255', '255', '255', '255', '255', '255');
+        }
+    }
+    
+    // Indices
+    for (const mesh of meshes) {
+        for (const idx of mesh.indices) {
+            lines.push(String(idx));
+        }
+    }
+    
+    return lines.join('\n');
+}
+
+function generateModJson(name) {
+    return `"modWorldInfo":
+{
+\t"name":"${name}",
+\t"fileName":"${name.replace(/\s+/g, '_').toLowerCase()}.txt"
+\t"startPositions":
+\t[
+\t\t\t"startPosition":
+\t\t\t{ 
+\t\t\t\t"x":0.0, 
+\t\t\t\t"y":0.0, 
+\t\t\t\t"z":5.0
+\t\t\t\t"angle":0.0
+\t\t\t}
+\t\t\t"startPosition":
+\t\t\t{ 
+\t\t\t\t"x":10.0, 
+\t\t\t\t"y":0.0, 
+\t\t\t\t"z":0.0
+\t\t\t\t"angle":90.0
+\t\t\t}
+\t],
+\t"skyBoxUp":"sky_top.jpg"
+\t"skyBoxForward":"sky_front.jpg"
+\t"skyBoxBack":"sky_back.jpg"
+\t"skyBoxLeft":"sky_left.jpg"
+\t"skyBoxRight":"sky_right.jpg"
+
+\t"specularBoxUp":"sky_top.jpg"
+\t"specularBoxForward":"sky_front.jpg"
+\t"specularBoxBack":"sky_back.jpg"
+\t"specularBoxLeft":"sky_left.jpg"
+\t"specularBoxRight":"sky_right.jpg"
+\t"specularBoxDown":"sky_bottom.jpg"
+
+\t"skyAngle":90.0
+\t"gamma":1.0
+
+\t"colorBackground": { "r": 0.5, "g": 0.7, "b": 1.0 },
+\t"colorLightingDirect": { "r": 1.0, "g": 0.95, "b": 0.9},
+\t"colorLightingAmbient": { "r": 0.4, "g": 0.45, "b": 0.5},
+\t"lightDirection": { "x": 45.0, "y": 60.0, "z":180.0 }
+}`;
+}
+
+// Simple gray texture as base64 data URL
+function generateGrayTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(0, 0, 256, 256);
+    // Add some noise for texture
+    for (let i = 0; i < 1000; i++) {
+        const x = Math.random() * 256;
+        const y = Math.random() * 256;
+        const gray = 120 + Math.random() * 30;
+        ctx.fillStyle = `rgb(${gray},${gray},${gray})`;
+        ctx.fillRect(x, y, 2, 2);
+    }
+    return canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+}
+
+function generateSkyTexture(color) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 512);
+    gradient.addColorStop(0, color);
+    gradient.addColorStop(1, '#ffffff');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 512, 512);
+    return canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+}
+
+async function exportToTrueSkate() {
     if (state.objects.length === 0) {
         alert('Add some objects first!');
         return;
     }
     
-    // For now, export as JSON that we can later convert
-    const exportData = {
-        version: '1.0',
-        name: 'My Skatepark',
-        objects: state.objects.map(obj => ({
-            type: obj.userData.type,
-            name: obj.userData.name,
-            position: {
-                x: obj.position.x,
-                y: obj.position.y,
-                z: obj.position.z
-            },
-            rotation: {
-                y: obj.rotation.y
-            },
-            scale: obj.scale.x
-        }))
-    };
+    const parkName = prompt('Enter skatepark name:', 'My Skatepark');
+    if (!parkName) return;
     
-    // Download as JSON
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'skatepark.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    const safeName = parkName.replace(/\s+/g, '_').toLowerCase();
     
-    console.log('Exported:', exportData);
-    alert(`Exported ${state.objects.length} objects!\n\nNote: Full True Skate format export coming soon.`);
+    // Show loading
+    document.getElementById('btn-export').textContent = 'EXPORTING...';
+    document.getElementById('btn-export').disabled = true;
+    
+    try {
+        // Generate meshes
+        const meshes = [];
+        
+        // Ground plane first
+        const groundGeo = generateGroundGeometry(50);
+        meshes.push({
+            vertices: groundGeo.vertices.map(v => transformVertex(v, { x: 0, y: -0.25, z: 0 }, 0, 1)),
+            indices: groundGeo.indices
+        });
+        
+        // User objects
+        for (const obj of state.objects) {
+            const generator = GEOMETRY_GENERATORS[obj.userData.type];
+            if (generator) {
+                const geo = generator();
+                meshes.push({
+                    vertices: geo.vertices.map(v => transformVertex(v, obj.position, obj.rotation.y, obj.scale.x)),
+                    indices: geo.indices
+                });
+            }
+        }
+        
+        // Generate files
+        const geometryFile = generateTrueSkateGeometryFile(meshes);
+        const modJson = generateModJson(parkName);
+        
+        // Create zip
+        const zip = new JSZip();
+        zip.file(`${safeName}.txt`, geometryFile);
+        zip.file('_mod.json', modJson);
+        zip.file('concrete_gray.jpg', generateGrayTexture(), { base64: true });
+        zip.file('sky_top.jpg', generateSkyTexture('#87CEEB'), { base64: true });
+        zip.file('sky_front.jpg', generateSkyTexture('#ADD8E6'), { base64: true });
+        zip.file('sky_back.jpg', generateSkyTexture('#ADD8E6'), { base64: true });
+        zip.file('sky_left.jpg', generateSkyTexture('#ADD8E6'), { base64: true });
+        zip.file('sky_right.jpg', generateSkyTexture('#ADD8E6'), { base64: true });
+        zip.file('sky_bottom.jpg', generateGrayTexture(), { base64: true });
+        
+        // Download
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${safeName}.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        alert(`Exported "${parkName}" with ${state.objects.length} objects!\n\nUpload the .zip file to mod.io to play it on your phone!`);
+        
+    } catch (error) {
+        console.error('Export error:', error);
+        alert('Export failed: ' + error.message);
+    } finally {
+        document.getElementById('btn-export').textContent = 'EXPORT';
+        document.getElementById('btn-export').disabled = false;
+    }
 }
 
 // ========================================
