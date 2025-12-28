@@ -1230,8 +1230,9 @@ function generateTrueSkateGeometryFile(meshes) {
         }
     }
     
-    // Indices
+    // Indices - each mesh needs #Mesh Indices marker
     for (const mesh of meshes) {
+        lines.push('#Mesh Indices');
         for (const idx of mesh.indices) {
             lines.push(String(idx));
         }
@@ -1240,42 +1241,67 @@ function generateTrueSkateGeometryFile(meshes) {
     // Close VIS section
     lines.push('>');
     
-    // COL section - Collision geometry (same as visual for skating)
+    // COL section - Collision geometry (needed for skating physics!)
+    const totalPolygons = meshes.reduce((sum, m) => sum + m.indices.length / 3, 0);
+    const totalPolyVerts = totalPolygons * 3; // 3 vertices per triangle
+    const totalPolyIndices = totalPolygons * 3; // 3 indices per triangle
+    
     lines.push('<COL ');
     lines.push(`${totalVerts} #Num Vertices`);
+    lines.push(`${totalPolyVerts} #Num Polygon Vertices`);
+    lines.push(`${totalPolyIndices} #Num Polygon Indices`);
+    lines.push('#Vertices');
     
-    // Collision vertices (simplified - just positions)
+    // Collision vertices - first vertex gets #x #y #z comments
+    let firstVert = true;
     for (const mesh of meshes) {
         for (const v of mesh.vertices) {
-            lines.push(v.x.toFixed(6));
-            lines.push(v.y.toFixed(6));
-            lines.push(v.z.toFixed(6));
+            if (firstVert) {
+                lines.push(`${v.x.toFixed(6)} #x`);
+                lines.push(`${v.y.toFixed(6)} #y`);
+                lines.push(`${v.z.toFixed(6)} #z`);
+                firstVert = false;
+            } else {
+                lines.push(v.x.toFixed(6));
+                lines.push(v.y.toFixed(6));
+                lines.push(v.z.toFixed(6));
+            }
         }
     }
     
-    // Collision indices
-    const totalIndices = meshes.reduce((sum, m) => sum + m.indices.length, 0);
-    lines.push(`${totalIndices / 3} #Num Triangles`);
+    // Polygons
+    lines.push('#Polygons');
     
     let indexOffset = 0;
+    let firstPoly = true;
     for (const mesh of meshes) {
         for (let i = 0; i < mesh.indices.length; i += 3) {
-            lines.push(String(mesh.indices[i] + indexOffset));
-            lines.push(String(mesh.indices[i + 1] + indexOffset));
-            lines.push(String(mesh.indices[i + 2] + indexOffset));
-            lines.push('0'); // Material/flag
+            if (firstPoly) {
+                lines.push('3 #Num Sides');
+                lines.push('0 #Atttribute');  // Note: original has typo "Atttribute"
+                lines.push(`${mesh.indices[i] + indexOffset} #Vertex Index`);
+                lines.push(`${mesh.indices[i + 1] + indexOffset} #Vertex Index`);
+                lines.push(`${mesh.indices[i + 2] + indexOffset} #Vertex Index`);
+                firstPoly = false;
+            } else {
+                lines.push('3');
+                lines.push('0');
+                lines.push(String(mesh.indices[i] + indexOffset));
+                lines.push(String(mesh.indices[i + 1] + indexOffset));
+                lines.push(String(mesh.indices[i + 2] + indexOffset));
+            }
         }
         indexOffset += mesh.vertices.length;
     }
     
     lines.push('>');
     
-    // EDGE section
+    // EDGE section - grinding edges (empty for now, rails could add these later)
     lines.push('<EDGE');
     lines.push('0 #Num Edges');
     lines.push('>');
     
-    // VOLU section  
+    // VOLU section - volume triggers (empty)
     lines.push('<VOLU');
     lines.push('0');
     lines.push('>');
