@@ -1173,7 +1173,7 @@ function generateTrueSkateGeometryFile(meshes) {
     // Textures
     lines.push('1 #Num Textures', 'concrete_gray');
     
-    // Materials
+    // Materials - full format matching True Skate
     const materials = [
         [128, 128, 130], [100, 100, 105], [85, 85, 90],
         [180, 180, 180], [136, 85, 51], [139, 69, 19]
@@ -1181,11 +1181,31 @@ function generateTrueSkateGeometryFile(meshes) {
     lines.push(`${materials.length} #Num Materials`);
     
     for (const [r, g, b] of materials) {
-        lines.push('#Material', '1 #Material Type (Solid)', '#Color', String(r), String(g), String(b), '255');
-        lines.push('1.000000 #Specular', '5.000000 #G Blend Sharpness', '0.800000 #G Blend Level', '0.500000 #G Blend Mode');
-        lines.push('#G Shadow Color', '180', '180', '180', '255');
-        lines.push('#G Highlight Color', '255', '255', '255', '255');
-        lines.push('0 #Texture index', '0', '0');
+        lines.push('#Material');
+        lines.push('1 #Material Type (Solid)');
+        lines.push('#Color');
+        lines.push(String(r), String(g), String(b), '255');
+        lines.push('1.000000 #Specular');
+        lines.push('5.500000 #G Blend Sharpness');
+        lines.push('0.800000 #G Blend Level');
+        lines.push('0.500000 #G Blend Mode');
+        lines.push('#G Shadow Color');
+        lines.push('180', '180', '180', '255');
+        lines.push('#G Highlight Color');
+        lines.push('255', '255', '255', '255');
+        lines.push('0.000000 #G Ignore Base Color');
+        lines.push('0.300000 #G Specular');
+        lines.push('5.500000 #B Blend Sharpness');
+        lines.push('0.800000 #B Blend Level');
+        lines.push('0.500000 #B Blend Mode');
+        lines.push('#B Shadow Color');
+        lines.push('200', '200', '200', '255');
+        lines.push('#B Highlight Color');
+        lines.push('255', '255', '255', '255');
+        lines.push('0.000000 #B Ignore Base Color');
+        lines.push('0.300000 #B Specular');
+        lines.push('1 #Num Layers');
+        lines.push('0 #Texture index');
     }
     
     // Total vertices and mesh count
@@ -1216,6 +1236,49 @@ function generateTrueSkateGeometryFile(meshes) {
             lines.push(String(idx));
         }
     }
+    
+    // Close VIS section
+    lines.push('>');
+    
+    // COL section - Collision geometry (same as visual for skating)
+    lines.push('<COL ');
+    lines.push(`${totalVerts} #Num Vertices`);
+    
+    // Collision vertices (simplified - just positions)
+    for (const mesh of meshes) {
+        for (const v of mesh.vertices) {
+            lines.push(v.x.toFixed(6));
+            lines.push(v.y.toFixed(6));
+            lines.push(v.z.toFixed(6));
+        }
+    }
+    
+    // Collision indices
+    const totalIndices = meshes.reduce((sum, m) => sum + m.indices.length, 0);
+    lines.push(`${totalIndices / 3} #Num Triangles`);
+    
+    let indexOffset = 0;
+    for (const mesh of meshes) {
+        for (let i = 0; i < mesh.indices.length; i += 3) {
+            lines.push(String(mesh.indices[i] + indexOffset));
+            lines.push(String(mesh.indices[i + 1] + indexOffset));
+            lines.push(String(mesh.indices[i + 2] + indexOffset));
+            lines.push('0'); // Material/flag
+        }
+        indexOffset += mesh.vertices.length;
+    }
+    
+    lines.push('>');
+    
+    // EDGE section
+    lines.push('<EDGE');
+    lines.push('0 #Num Edges');
+    lines.push('>');
+    
+    // VOLU section  
+    lines.push('<VOLU');
+    lines.push('0');
+    lines.push('>');
     
     return lines.join('\n');
 }

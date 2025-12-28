@@ -1,0 +1,81 @@
+=== MATERIAL FORMAT COMPARISON ===
+
+ORIGINAL (from working map):
+----------------------------
+#Material
+1 #Material Type (Solid)
+#Color
+255
+255
+255
+255
+1.000000 #Specular
+5.583000 #G Blend Sharpness
+0.858000 #G Blend Level
+0.626000 #G Blend Mode
+#G Shadow Color
+203
+203
+203
+255
+#G Highlight Color
+255
+255
+255
+255
+0.000000 #G Ignore Base Color      <-- MISSING IN OURS
+0.342000 #G Specular               <-- MISSING IN OURS
+5.500000 #B Blend Sharpness        <-- MISSING IN OURS
+0.800000 #B Blend Level            <-- MISSING IN OURS
+0.655000 #B Blend Mode             <-- MISSING IN OURS
+#B Shadow Color                    <-- MISSING IN OURS
+214
+214
+214
+255
+#B Highlight Color                 <-- MISSING IN OURS
+255
+255
+255
+255
+0.023000 #B Ignore Base Color      <-- MISSING IN OURS
+0.372000 #B Specular               <-- MISSING IN OURS
+3 #Num Layers                      <-- MISSING IN OURS
+0 #Texture index
+1
+2
+
+OURS (simplified):
+------------------
+#Material
+1 #Material Type (Solid)
+#Color
+128
+128
+130
+255
+1.000000 #Specular
+5.000000 #G Blend Sharpness
+0.800000 #G Blend Level
+0.500000 #G Blend Mode
+#G Shadow Color
+180
+180
+180
+255
+#G Highlight Color
+255
+255
+255
+255
+0 #Texture index          <-- Missing #Num Layers before this!
+0
+0
+
+ISSUES FOUND:
+1. Missing #G Ignore Base Color
+2. Missing #G Specular
+3. Missing entire #B (blend) section
+4. Missing #Num Layers before texture indices
+5. Texture index format different (we have 3 lines with 0, original has Num Layers then that many indices)
+
