@@ -15107,138 +15107,62 @@ function createRampGeometry(length, height, width) {
 }
 
 function createQuarterPipeEditorGeometry(height, width, segments, lipAngle) {
-    // Quarter pipe: flat bottom approach + curved transition + vertical back wall
-    // Radius is larger than height to create a proper concave bowl shape.
-    // The curve sweeps up to where it naturally ends, then a vertical wall
-    // extends to the full height — just like a real quarter pipe.
-    const radius = height * 1.8; // larger radius = more dramatic concave curve
-    const halfW = width / 2;
-    const flatLen = height * 0.5; // flat approach section
+    // Quarter pipe: flat bottom approach + curved concave transition + vertical back wall
+    // Uses THREE.ExtrudeGeometry for reliable mesh generation.
+    //
+    // Real quarter pipe anatomy (side profile):
+    //   flat ground ──> concave curve sweeping up ──> vertical back wall with coping at top
+    //
+    const radius = height * 1.8; // larger radius = more pronounced concave curve
+    const flatLen = height * 0.5; // flat approach section before the curve starts
 
-    // Calculate the max angle the arc needs to sweep to reach the full height
-    // Arc formula: y = radius * (1 - cos(a)), solve for a when y = height
-    // a = acos(1 - height/radius)
-    const maxPossibleAngle = Math.acos(1 - height / radius);
+    // Calculate the max angle the arc sweeps to reach the full height
+    // Arc: y = radius * (1 - cos(a)), solve for y = height => a = acos(1 - height/radius)
+    const maxPossibleAngle = Math.acos(Math.max(-1, Math.min(1, 1 - height / radius)));
     const lipAngleRad = (lipAngle / 90) * (Math.PI / 2);
     const angleMax = Math.min(lipAngleRad, maxPossibleAngle);
 
-    const profile = [];
-    const numCurve = segments + 1;
+    // Build the 2D side profile as a THREE.Shape
+    // The shape is the closed outline of the quarter pipe cross-section in the XY plane.
+    // We trace: bottom-left → flat section → curve up → top of curve → back wall down → close
+    const shape = new THREE.Shape();
 
-    // Flat section: 2 points at y=0
-    profile.push({ x: -flatLen, y: 0, nx: 0, ny: -1 });
-    profile.push({ x: 0, y: 0, nx: 0, ny: -1 });
+    // Start at bottom-left corner
+    shape.moveTo(-flatLen, 0);
 
-    // Curved section: arc from angle=0 (flat) sweeping up
-    for (let i = 0; i < numCurve; i++) {
+    // Flat section along ground to curve start
+    shape.lineTo(0, 0);
+
+    // Curved transition: arc from angle=0 (horizontal) sweeping up
+    for (let i = 1; i <= segments; i++) {
         const t = i / segments;
         const a = angleMax * t;
         const x = radius * Math.sin(a);
         const y = radius * (1 - Math.cos(a));
-        const nx = -Math.sin(a);
-        const ny = Math.cos(a);
-        profile.push({ x, y, nx, ny });
+        shape.lineTo(x, y);
     }
 
-    const totalPts = profile.length;
-    const topX = profile[totalPts - 1].x;
-    const topY = profile[totalPts - 1].y;
+    // Top of the curve
+    const topX = radius * Math.sin(angleMax);
+    const topY = radius * (1 - Math.cos(angleMax));
 
-    const positions = [];
-    const normals = [];
-    const uvs = [];
-    const indices = [];
+    // Back wall: straight down from top of curve to ground
+    shape.lineTo(topX, 0);
 
-    // Compute arc lengths along full profile for UV mapping
-    const arcLengths = [0];
-    for (let i = 1; i < totalPts; i++) {
-        const dx = profile[i].x - profile[i-1].x;
-        const dy = profile[i].y - profile[i-1].y;
-        arcLengths.push(arcLengths[i-1] + Math.sqrt(dx*dx + dy*dy));
-    }
-    const totalArc = arcLengths[totalPts - 1];
+    // Close back to start (automatic, but being explicit)
+    shape.lineTo(-flatLen, 0);
 
-    // === Skating surface (flat + curved transition) ===
-    for (let i = 0; i < totalPts; i++) {
-        const p = profile[i];
-        const u = totalArc > 0 ? arcLengths[i] / totalArc : 0;
-        positions.push(p.x, p.y, -halfW);
-        normals.push(p.nx, p.ny, 0);
-        uvs.push(u, 0);
-        positions.push(p.x, p.y, halfW);
-        normals.push(p.nx, p.ny, 0);
-        uvs.push(u, 1);
-    }
-    for (let i = 0; i < totalPts - 1; i++) {
-        const a = i * 2, b = i * 2 + 1, c = (i+1) * 2, d = (i+1) * 2 + 1;
-        indices.push(a, c, b);
-        indices.push(b, c, d);
-    }
+    // Extrude the 2D shape along the Z axis (width)
+    const geo = new THREE.ExtrudeGeometry(shape, {
+        steps: 1,
+        depth: width,
+        bevelEnabled: false,
+        curveSegments: segments
+    });
 
-    // === Bottom face (underside at y=0, from -flatLen to topX) ===
-    const bi = positions.length / 3;
-    positions.push(-flatLen, 0, -halfW); normals.push(0, -1, 0); uvs.push(0, 0);
-    positions.push(-flatLen, 0, halfW);  normals.push(0, -1, 0); uvs.push(0, 1);
-    positions.push(topX, 0, -halfW);     normals.push(0, -1, 0); uvs.push(1, 0);
-    positions.push(topX, 0, halfW);      normals.push(0, -1, 0); uvs.push(1, 1);
-    indices.push(bi, bi+1, bi+2);
-    indices.push(bi+1, bi+3, bi+2);
-
-    // === Back wall (vertical face at x=topX from y=0 to y=topY) ===
-    const wi = positions.length / 3;
-    positions.push(topX, 0, -halfW);    normals.push(1, 0, 0); uvs.push(0, 0);
-    positions.push(topX, 0, halfW);     normals.push(1, 0, 0); uvs.push(1, 0);
-    positions.push(topX, topY, -halfW); normals.push(1, 0, 0); uvs.push(0, 1);
-    positions.push(topX, topY, halfW);  normals.push(1, 0, 0); uvs.push(1, 1);
-    indices.push(wi, wi+2, wi+1);
-    indices.push(wi+1, wi+2, wi+3);
-
-    // === Front wall (vertical face at x=-flatLen, small height for the flat section edge) ===
-    // Only needed if flat section exists
-    if (flatLen > 0) {
-        const fi = positions.length / 3;
-        positions.push(-flatLen, 0, -halfW);    normals.push(-1, 0, 0); uvs.push(0, 0);
-        positions.push(-flatLen, 0, halfW);     normals.push(-1, 0, 0); uvs.push(1, 0);
-    }
-
-    // === Side faces (left z=-halfW, right z=+halfW) ===
-    // Left side panel
-    const li = positions.length / 3;
-    // Add all profile points on left side
-    for (let i = 0; i < totalPts; i++) {
-        positions.push(profile[i].x, profile[i].y, -halfW);
-        normals.push(0, 0, -1);
-        uvs.push((profile[i].x + flatLen) / (topX + flatLen), profile[i].y / (topY || 1));
-    }
-    // Add bottom-back corner to close the shape
-    positions.push(topX, 0, -halfW);
-    normals.push(0, 0, -1);
-    uvs.push(1, 0);
-    // Fan triangulation from first point (bottom-left corner at -flatLen, 0)
-    const leftVerts = totalPts + 1; // profile pts + bottom-back corner
-    for (let i = 1; i < leftVerts - 1; i++) {
-        indices.push(li, li + i, li + i + 1);
-    }
-
-    // Right side panel
-    const ri = positions.length / 3;
-    for (let i = 0; i < totalPts; i++) {
-        positions.push(profile[i].x, profile[i].y, halfW);
-        normals.push(0, 0, 1);
-        uvs.push((profile[i].x + flatLen) / (topX + flatLen), profile[i].y / (topY || 1));
-    }
-    positions.push(topX, 0, halfW);
-    normals.push(0, 0, 1);
-    uvs.push(1, 0);
-    for (let i = 1; i < leftVerts - 1; i++) {
-        indices.push(ri, ri + i + 1, ri + i);
-    }
-
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
-    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-    geo.setIndex(indices);
+    // Center the geometry along the Z axis
+    geo.translate(0, 0, -width / 2);
+    geo.computeVertexNormals();
     return geo;
 }
 
@@ -15370,130 +15294,81 @@ function createKickerEditorGeometry(length, height, width, segments, lipAngle) {
 }
 
 function createSpineEditorGeometry(height, width, segments, lipAngle) {
-    // Spine: two quarter pipes mirrored, joined at center with flat bottom sections
+    // Spine: two mirrored quarter pipes joined at the top (like a mini half-pipe / spine ramp)
+    // Uses THREE.ExtrudeGeometry for reliable mesh generation.
+    //
+    // Side profile:  flat ──curve up──> TOP <──curve up── flat
+    //
     const radius = height * 1.8; // larger radius for proper concave curve
-    const halfW = width / 2;
-    const numCurve = segments + 1;
     const flatLen = height * 0.4; // flat section on each side
 
     // Calculate max angle to reach the full height
-    const maxPossibleAngle = Math.acos(1 - height / radius);
+    const maxPossibleAngle = Math.acos(Math.max(-1, Math.min(1, 1 - height / radius)));
     const lipAngleRad = (lipAngle / 90) * (Math.PI / 2);
     const angleMax = Math.min(lipAngleRad, maxPossibleAngle);
 
-    // Generate curve profile (one side, from center outward)
-    const curveProfile = [];
-    for (let i = 0; i < numCurve; i++) {
+    const topX = radius * Math.sin(angleMax);
+    const topY = radius * (1 - Math.cos(angleMax));
+
+    // Build the 2D side profile as a THREE.Shape
+    // Trace: right flat ground → right curve up → top → left curve down → left flat ground → close bottom
+    const shape = new THREE.Shape();
+
+    // Start at bottom-right corner
+    const outerX = topX + flatLen;
+    shape.moveTo(outerX, 0);
+
+    // Right flat section inward
+    shape.lineTo(topX, 0);
+
+    // Right curve going up (from ground to top)
+    for (let i = 1; i <= segments; i++) {
         const t = i / segments;
         const a = angleMax * t;
-        curveProfile.push({
-            x: radius * Math.sin(a),
-            y: radius * (1 - Math.cos(a)),
-            nx: -Math.sin(a),
-            ny: Math.cos(a)
-        });
+        const x = radius * Math.sin(a);
+        const y = radius * (1 - Math.cos(a));
+        // Right side curve: x goes from topX down toward 0 as we go up
+        // Actually we need to reverse: at i=0, we're at (topX, 0) (bottom of curve)
+        // and at i=segments, we're at (0, topY) (top/center)
+        // So use reversed angle: a = angleMax * (1 - t)...
+        // Wait - let's think about this differently.
+        // The curve profile from center (top) going down-right is:
+        //   x = radius * sin(a), y = radius * (1 - cos(a)) for a from 0 to angleMax
+        // That means a=0 is at center (x=0, y=0 which is ground level before translation)
+        // Actually the curve goes: a=0 → (0,0), a=angleMax → (topX, topY)
+        // For the right side going UP from ground to top:
+        // We go from (topX, 0) at ground, curving up to (0, topY) at center
+        // So we trace a from angleMax down to 0:
+        const aRev = angleMax * (1 - t);
+        shape.lineTo(radius * Math.sin(aRev), radius * (1 - Math.cos(aRev)));
     }
-    const topX = curveProfile[numCurve - 1].x;
-    const topY = curveProfile[numCurve - 1].y;
+    // Now at center top (0, topY)
 
-    // Build full profile for right side: flat at y=0 from (topX+flatLen) down to (topX), then curve back to center (0)
-    // Right side profile: flat approach → curve → center
-    const rightProfile = [];
-    // Flat section (going from far right toward the curve start)
-    rightProfile.push({ x: topX + flatLen, y: 0, nx: 0, ny: -1 });
-    rightProfile.push({ x: topX, y: 0, nx: 0, ny: -1 });
-    // Curve section (reversed: from bottom of curve up to the lip at center)
-    for (let i = 0; i < numCurve; i++) {
-        const p = curveProfile[i];
-        rightProfile.push({ x: p.x, y: p.y, nx: p.nx, ny: p.ny });
+    // Left curve going down (from top to ground, mirrored)
+    for (let i = 1; i <= segments; i++) {
+        const t = i / segments;
+        const a = angleMax * t;
+        shape.lineTo(-radius * Math.sin(a), radius * (1 - Math.cos(a)));
     }
+    // Now at (-topX, 0)
 
-    // Left side is mirrored
-    const leftProfile = [];
-    leftProfile.push({ x: -(topX + flatLen), y: 0, nx: 0, ny: -1 });
-    leftProfile.push({ x: -topX, y: 0, nx: 0, ny: -1 });
-    for (let i = 0; i < numCurve; i++) {
-        const p = curveProfile[i];
-        leftProfile.push({ x: -p.x, y: p.y, nx: p.nx, ny: p.ny });
-    }
+    // Left flat section outward
+    shape.lineTo(-outerX, 0);
 
-    const positions = [];
-    const normalsArr = [];
-    const uvsArr = [];
-    const idxs = [];
+    // Close bottom (back to start)
+    shape.lineTo(outerX, 0);
 
-    // Helper to add a surface strip from a profile
-    function addSurface(prof, flipNx) {
-        const base = positions.length / 3;
-        const n = prof.length;
-        for (let i = 0; i < n; i++) {
-            const p = prof[i];
-            const nxSign = flipNx ? -1 : 1;
-            positions.push(p.x, p.y, -halfW); normalsArr.push(nxSign * p.nx, p.ny, 0); uvsArr.push(i/(n-1), 0);
-            positions.push(p.x, p.y, halfW);  normalsArr.push(nxSign * p.nx, p.ny, 0); uvsArr.push(i/(n-1), 1);
-        }
-        for (let i = 0; i < n - 1; i++) {
-            const a = base+i*2, b = base+i*2+1, c = base+(i+1)*2, d = base+(i+1)*2+1;
-            if (flipNx) {
-                idxs.push(a, b, c);
-                idxs.push(b, d, c);
-            } else {
-                idxs.push(a, c, b);
-                idxs.push(b, c, d);
-            }
-        }
-    }
+    // Extrude the 2D shape along the Z axis (width)
+    const geo = new THREE.ExtrudeGeometry(shape, {
+        steps: 1,
+        depth: width,
+        bevelEnabled: false,
+        curveSegments: segments
+    });
 
-    // Left side surface (mirrored normals)
-    addSurface(leftProfile, true);
-    // Right side surface
-    addSurface(rightProfile, false);
-
-    // Bottom face (underside)
-    const outerX = topX + flatLen;
-    const bi = positions.length / 3;
-    positions.push(-outerX, 0, -halfW); normalsArr.push(0, -1, 0); uvsArr.push(0, 0);
-    positions.push(-outerX, 0, halfW);  normalsArr.push(0, -1, 0); uvsArr.push(0, 1);
-    positions.push(outerX, 0, -halfW);  normalsArr.push(0, -1, 0); uvsArr.push(1, 0);
-    positions.push(outerX, 0, halfW);   normalsArr.push(0, -1, 0); uvsArr.push(1, 1);
-    idxs.push(bi, bi+1, bi+2);
-    idxs.push(bi+1, bi+3, bi+2);
-
-    // Side panels (left z=-halfW, right z=+halfW)
-    // Build full outline for side panels: left flat → left curve → right curve → right flat → back to start
-    const outline = [];
-    for (let i = 0; i < leftProfile.length; i++) outline.push(leftProfile[i]);
-    // Right profile is reversed (we go from center back out to the right)
-    for (let i = rightProfile.length - 1; i >= 0; i--) outline.push(rightProfile[i]);
-
-    // Left side panel (z = -halfW)
-    const si = positions.length / 3;
-    for (let i = 0; i < outline.length; i++) {
-        positions.push(outline[i].x, outline[i].y, -halfW);
-        normalsArr.push(0, 0, -1);
-        uvsArr.push((outline[i].x + outerX) / (2 * outerX), outline[i].y / (topY || 1));
-    }
-    // Fan triangulation from bottom-left corner
-    for (let i = 1; i < outline.length - 1; i++) {
-        idxs.push(si, si + i, si + i + 1);
-    }
-
-    // Right side panel (z = +halfW)
-    const si2 = positions.length / 3;
-    for (let i = 0; i < outline.length; i++) {
-        positions.push(outline[i].x, outline[i].y, halfW);
-        normalsArr.push(0, 0, 1);
-        uvsArr.push((outline[i].x + outerX) / (2 * outerX), outline[i].y / (topY || 1));
-    }
-    for (let i = 1; i < outline.length - 1; i++) {
-        idxs.push(si2, si2 + i + 1, si2 + i);
-    }
-
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    geo.setAttribute('normal', new THREE.Float32BufferAttribute(normalsArr, 3));
-    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvsArr, 2));
-    geo.setIndex(idxs);
+    // Center the geometry along the Z axis
+    geo.translate(0, 0, -width / 2);
+    geo.computeVertexNormals();
     return geo;
 }
 
