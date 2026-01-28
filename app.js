@@ -14655,9 +14655,9 @@ const editorState = {
             { name: 'Small Kicker', rampType: 'kicker', height: 30, length: 100, width: 80, curveSegments: 12, lipAngle: 25 },
             { name: 'Launch Kicker', rampType: 'kicker', height: 50, length: 120, width: 100, curveSegments: 12, lipAngle: 40 },
             { name: 'Mini Spine', rampType: 'spine', height: 80, width: 120, curveSegments: 16, copingEnabled: true, lipAngle: 90 },
-            { name: 'Low Pyramid', rampType: 'pyramid', height: 25, length: 300, width: 300, pyramidTopSize: 75 },
-            { name: 'Contest Pyramid', rampType: 'pyramid', height: 40, length: 400, width: 400, pyramidTopSize: 70 },
-            { name: 'Steep Pyramid', rampType: 'pyramid', height: 60, length: 250, width: 250, pyramidTopSize: 55 },
+            { name: 'Low Pyramid', rampType: 'pyramid', height: 15, length: 200, width: 200, pyramidTopSize: 80, material: 'metal' },
+            { name: 'Contest Pyramid', rampType: 'pyramid', height: 20, length: 250, width: 250, pyramidTopSize: 75, material: 'metal' },
+            { name: 'Steep Pyramid', rampType: 'pyramid', height: 40, length: 200, width: 200, pyramidTopSize: 65, material: 'metal' },
         ],
         stairs: [
             { name: '3 Stair', steps: 3, height: 45 },
@@ -15059,6 +15059,49 @@ function updateEditorObject() {
             geometry.rotateZ(Math.PI / 2);
             break;
         case 'ramp':
+            if (editorState.settings.rampType === 'pyramid') {
+                // Pyramid returns a Group, not a geometry
+                const pyramidGroup = createPyramidEditorGroup(l, h, w, editorState.settings);
+                pyramidGroup.position.y = 0;
+                // Add grind edge indicators
+                if (editorState.settings.copingEnabled) {
+                    const edgeMat = new THREE.LineBasicMaterial({ color: 0x00ff88, linewidth: 2 });
+                    const topFrac = (editorState.settings.pyramidTopSize || 70) / 100;
+                    const thl = l / 2 * topFrac;
+                    const thw = w / 2 * topFrac;
+                    // All 4 top edges
+                    const frontPts = [new THREE.Vector3(-thl, h, thw), new THREE.Vector3(thl, h, thw)];
+                    const backPts = [new THREE.Vector3(thl, h, -thw), new THREE.Vector3(-thl, h, -thw)];
+                    const rightPts = [new THREE.Vector3(thl, h, thw), new THREE.Vector3(thl, h, -thw)];
+                    const leftPts = [new THREE.Vector3(-thl, h, -thw), new THREE.Vector3(-thl, h, thw)];
+                    pyramidGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(frontPts), edgeMat));
+                    pyramidGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(backPts), edgeMat));
+                    pyramidGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(rightPts), edgeMat));
+                    pyramidGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(leftPts), edgeMat));
+                    // Box grind edges
+                    const boxW = w * 0.25;
+                    const boxH = h * 0.6;
+                    const boxL = l * 0.18;
+                    const boxBaseY = h;
+                    const boxCenterZ = thw - boxL / 2;
+                    const boxCenterX = thl - boxW / 2;
+                    const boxTopY = boxBaseY + boxH;
+                    const bx1 = boxCenterX - boxW / 2, bx2 = boxCenterX + boxW / 2;
+                    const bz1 = boxCenterZ - boxL / 2, bz2 = boxCenterZ + boxL / 2;
+                    // Top edges of the box (grindable)
+                    const boxFront = [new THREE.Vector3(bx1, boxTopY, bz2), new THREE.Vector3(bx2, boxTopY, bz2)];
+                    const boxBack = [new THREE.Vector3(bx2, boxTopY, bz1), new THREE.Vector3(bx1, boxTopY, bz1)];
+                    const boxRight = [new THREE.Vector3(bx2, boxTopY, bz2), new THREE.Vector3(bx2, boxTopY, bz1)];
+                    const boxLeft = [new THREE.Vector3(bx1, boxTopY, bz1), new THREE.Vector3(bx1, boxTopY, bz2)];
+                    pyramidGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(boxFront), edgeMat));
+                    pyramidGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(boxBack), edgeMat));
+                    pyramidGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(boxRight), edgeMat));
+                    pyramidGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(boxLeft), edgeMat));
+                }
+                editorState.currentObject = pyramidGroup;
+                editorState.scene.add(pyramidGroup);
+                return; // Skip normal mesh creation
+            }
             geometry = createRampGeometry(l, h, w);
             break;
         case 'stairs':
@@ -15421,31 +15464,26 @@ function createSpineEditorGeometry(height, width, segments, lipAngle) {
 }
 
 function createPyramidEditorGeometry(length, height, width, topSizePercent) {
-    // Frustum pyramid: wide base with flat top plateau.
-    // Uses THREE.BufferGeometry with manual vertices for a clean frustum shape.
-    //
-    // Side profile:  flat top plateau
-    //                /‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
-    //               / sloped sides     \
-    //              /____________________\  base
-    //
+    // Legacy single-geometry version - still used by export
+    return createPyramidFrustumGeometry(length, height, width, topSizePercent);
+}
+
+function createPyramidFrustumGeometry(length, height, width, topSizePercent) {
+    // Frustum pyramid: wide base with flat top plateau
     const topFrac = (topSizePercent || 70) / 100;
     const halfL = length / 2;
     const halfW = width / 2;
     const topHalfL = halfL * topFrac;
     const topHalfW = halfW * topFrac;
 
-    // 8 corners of the frustum (4 base + 4 top)
-    // Base corners at y=0
-    const b0 = [-halfL, 0, -halfW]; // back-left
-    const b1 = [ halfL, 0, -halfW]; // back-right
-    const b2 = [ halfL, 0,  halfW]; // front-right
-    const b3 = [-halfL, 0,  halfW]; // front-left
-    // Top corners at y=height
-    const t0 = [-topHalfL, height, -topHalfW]; // back-left
-    const t1 = [ topHalfL, height, -topHalfW]; // back-right
-    const t2 = [ topHalfL, height,  topHalfW]; // front-right
-    const t3 = [-topHalfL, height,  topHalfW]; // front-left
+    const b0 = [-halfL, 0, -halfW];
+    const b1 = [ halfL, 0, -halfW];
+    const b2 = [ halfL, 0,  halfW];
+    const b3 = [-halfL, 0,  halfW];
+    const t0 = [-topHalfL, height, -topHalfW];
+    const t1 = [ topHalfL, height, -topHalfW];
+    const t2 = [ topHalfL, height,  topHalfW];
+    const t3 = [-topHalfL, height,  topHalfW];
 
     const positions = [];
     const normals = [];
@@ -15460,7 +15498,6 @@ function createPyramidEditorGeometry(length, height, width, topSizePercent) {
         indices.push(base, base+1, base+2, base, base+2, base+3);
     }
 
-    // Helper to calculate face normal from 3 points
     function faceNormal(a, b, c) {
         const ax = b[0]-a[0], ay = b[1]-a[1], az = b[2]-a[2];
         const bx = c[0]-a[0], by = c[1]-a[1], bz = c[2]-a[2];
@@ -15469,27 +15506,16 @@ function createPyramidEditorGeometry(length, height, width, topSizePercent) {
         return [nx/len, ny/len, nz/len];
     }
 
-    // Top face (flat plateau) - skateable
-    // CCW winding from above: back-left → front-left → front-right → back-right
+    // Top face - CCW from above
     addQuad(t0, t3, t2, t1, [0, 1, 0], 0, 0, 1, 0, 1, 1, 0, 1);
-
-    // Front slope (+Z face): b3, b2, t2, t3
-    const nFront = faceNormal(b3, b2, t3);
-    addQuad(b3, b2, t2, t3, nFront, 0, 0, 1, 0, 1, 1, 0, 1);
-
-    // Back slope (-Z face): b1, b0, t0, t1
-    const nBack = faceNormal(b1, b0, t1);
-    addQuad(b1, b0, t0, t1, nBack, 0, 0, 1, 0, 1, 1, 0, 1);
-
-    // Right slope (+X face): b2, b1, t1, t2
-    const nRight = faceNormal(b2, b1, t2);
-    addQuad(b2, b1, t1, t2, nRight, 0, 0, 1, 0, 1, 1, 0, 1);
-
-    // Left slope (-X face): b0, b3, t3, t0
-    const nLeft = faceNormal(b0, b3, t0);
-    addQuad(b0, b3, t3, t0, nLeft, 0, 0, 1, 0, 1, 1, 0, 1);
-
-    // No bottom face (sits on ground, would z-fight)
+    // Front slope
+    addQuad(b3, b2, t2, t3, faceNormal(b3, b2, t3), 0, 0, 1, 0, 1, 1, 0, 1);
+    // Back slope
+    addQuad(b1, b0, t0, t1, faceNormal(b1, b0, t1), 0, 0, 1, 0, 1, 1, 0, 1);
+    // Right slope
+    addQuad(b2, b1, t1, t2, faceNormal(b2, b1, t2), 0, 0, 1, 0, 1, 1, 0, 1);
+    // Left slope
+    addQuad(b0, b3, t3, t0, faceNormal(b0, b3, t0), 0, 0, 1, 0, 1, 1, 0, 1);
 
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -15497,6 +15523,152 @@ function createPyramidEditorGeometry(length, height, width, topSizePercent) {
     geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
     geo.setIndex(indices);
     return geo;
+}
+
+function createPyramidEditorGroup(length, height, width, settings) {
+    // Compound pyramid with: metal frustum body + bank ramp on one corner + grind box on bank
+    // Based on reference photos of a real skatepark pyramid obstacle
+    const group = new THREE.Group();
+    const topPct = settings.pyramidTopSize || 70;
+    const matProps = editorState.materials[settings.material] || editorState.materials.concrete;
+
+    // 1. Main frustum body (galvanized metal appearance)
+    const frustumGeo = createPyramidFrustumGeometry(length, height, width, topPct);
+    const metalMat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(matProps.color),
+        roughness: matProps.roughness,
+        metalness: settings.material === 'metal' ? 0.6 : 0.1
+    });
+    const frustumMesh = new THREE.Mesh(frustumGeo, metalMat);
+    group.add(frustumMesh);
+
+    // 2. Bank ramp on one corner (front-right corner, steeper angle ~25-30 degrees)
+    // The bank replaces a section of the front slope with a steeper incline
+    const topFrac = topPct / 100;
+    const halfL = length / 2;
+    const halfW = width / 2;
+    const topHalfL = halfL * topFrac;
+    const topHalfW = halfW * topFrac;
+
+    // Bank occupies ~1/3 of the front-right edge
+    const bankWidth = width * 0.30;  // width of bank along the edge
+    const bankBaseDepth = (halfW - topHalfW) * 1.8; // extends further out from the base
+    const bankHeight = height * 1.2; // slightly taller to create steeper angle
+
+    // Position: front-right corner of the top plateau
+    const bankCenterX = topHalfL - bankWidth * 0.3;
+    const bankStartZ = topHalfW;
+
+    // Create bank as a wedge shape using BufferGeometry
+    const bankPositions = [];
+    const bankNormals = [];
+    const bankUvs = [];
+    const bankIndices = [];
+    let bankVtxCount = 0;
+
+    function addBankQuad(p0, p1, p2, p3, nx, ny, nz) {
+        const base = bankVtxCount;
+        bankPositions.push(...p0, ...p1, ...p2, ...p3);
+        bankNormals.push(nx,ny,nz, nx,ny,nz, nx,ny,nz, nx,ny,nz);
+        bankUvs.push(0,0, 1,0, 1,1, 0,1);
+        bankIndices.push(base, base+1, base+2, base, base+2, base+3);
+        bankVtxCount += 4;
+    }
+
+    function addBankTri(p0, p1, p2, nx, ny, nz) {
+        const base = bankVtxCount;
+        bankPositions.push(...p0, ...p1, ...p2);
+        bankNormals.push(nx,ny,nz, nx,ny,nz, nx,ny,nz);
+        bankUvs.push(0,0, 1,0, 0.5,1);
+        bankIndices.push(base, base+1, base+2);
+        bankVtxCount += 3;
+    }
+
+    // Bank vertices
+    const bw = bankWidth / 2;
+    const bx = bankCenterX; // center X of the bank
+    // Top edge (on the pyramid top surface)
+    const bt0 = [bx - bw, height, bankStartZ]; // top-left
+    const bt1 = [bx + bw, height, bankStartZ]; // top-right
+    // Bottom edge (on the ground, extended outward)
+    const bb0 = [bx - bw * 1.3, 0, bankStartZ + bankBaseDepth]; // bottom-left (wider at base)
+    const bb1 = [bx + bw * 1.3, 0, bankStartZ + bankBaseDepth]; // bottom-right
+
+    // Bank surface (the ramp itself)
+    const bankNx = 0;
+    const bankDz = bankBaseDepth;
+    const bankDy = -height;
+    const bankLen = Math.sqrt(bankDz * bankDz + bankDy * bankDy);
+    const bankNy = bankDz / bankLen;
+    const bankNz = height / bankLen;
+    addBankQuad(bt0, bt1, bb1, bb0, bankNx, bankNy, -bankNz);
+
+    // Side triangles
+    // Left side
+    addBankTri(bt0, bb0, [bx - bw, 0, bankStartZ], -1, 0, 0);
+    // Right side
+    addBankTri(bt1, [bx + bw, 0, bankStartZ], bb1, 1, 0, 0);
+
+    const bankGeo = new THREE.BufferGeometry();
+    bankGeo.setAttribute('position', new THREE.Float32BufferAttribute(bankPositions, 3));
+    bankGeo.setAttribute('normal', new THREE.Float32BufferAttribute(bankNormals, 3));
+    bankGeo.setAttribute('uv', new THREE.Float32BufferAttribute(bankUvs, 2));
+    bankGeo.setIndex(bankIndices);
+
+    // Red/white striped material for the bank
+    const bankCanvas = document.createElement('canvas');
+    bankCanvas.width = 128;
+    bankCanvas.height = 128;
+    const ctx = bankCanvas.getContext('2d');
+    // Draw diagonal red/white stripes
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 128, 128);
+    ctx.fillStyle = '#cc2222';
+    const stripeW = 24;
+    for (let i = -128; i < 256; i += stripeW * 2) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i + stripeW, 0);
+        ctx.lineTo(i + stripeW + 128, 128);
+        ctx.lineTo(i + 128, 128);
+        ctx.fill();
+    }
+    const bankTexture = new THREE.CanvasTexture(bankCanvas);
+    bankTexture.wrapS = THREE.RepeatWrapping;
+    bankTexture.wrapT = THREE.RepeatWrapping;
+    const bankMat = new THREE.MeshStandardMaterial({
+        map: bankTexture,
+        roughness: 0.7,
+        metalness: 0.1
+    });
+
+    const bankMesh = new THREE.Mesh(bankGeo, bankMat);
+    group.add(bankMesh);
+
+    // 3. Grind box/ledge on top of the pyramid near the bank
+    // Dark colored box sitting at the top surface near the front-right corner
+    const boxW = width * 0.25;   // width of box
+    const boxH = height * 0.6;   // height of box
+    const boxL = length * 0.18;  // length/depth of box
+    const boxBaseY = height;     // sits on top of the pyramid
+    const boxCenterZ = topHalfW - boxL / 2; // near front edge but on the plateau
+    const boxCenterX = topHalfL - boxW / 2; // near right edge
+
+    const boxGeo = new THREE.BoxGeometry(boxW, boxH, boxL);
+    const boxMat = new THREE.MeshStandardMaterial({
+        color: 0x2a2018,
+        roughness: 0.85,
+        metalness: 0.05
+    });
+    const boxMesh = new THREE.Mesh(boxGeo, boxMat);
+    boxMesh.position.set(boxCenterX, boxBaseY + boxH / 2, boxCenterZ);
+    group.add(boxMesh);
+
+    // Store geometry reference for export (use frustum geo)
+    group.userData.frustumGeometry = frustumGeo;
+    group.userData.isPyramidGroup = true;
+
+    return group;
 }
 
 function createStairsGeometry(length, height, width, steps) {
@@ -15925,18 +16097,19 @@ function generateDIYFromEditorObject(name) {
         colPolys.push({ sides: rightIndices.length, attr: 0, indices: rightIndices.slice().reverse() });
 
     } else if (isRamp && settings.rampType === 'pyramid') {
-        // Pyramid frustum collision: flat top + 4 sloped sides
+        // Compound pyramid collision: frustum + bank ramp + grind box
         const topPct = (settings.pyramidTopSize || 70) / 100;
         const hh = (height / 100) * scale;
         const hl = (length / 200) * scale;
-        const hw2 = hw; // already half-width
-        const thl = hl * topPct;  // top half-length
-        const thw = hw2 * topPct; // top half-width
-        // 8 vertices: 4 base (y=0) + 4 top (y=hh)
-        colVerts.push([-hl, 0, -hw2]);  // 0 base back-left
-        colVerts.push([ hl, 0, -hw2]);  // 1 base back-right
-        colVerts.push([ hl, 0,  hw2]);  // 2 base front-right
-        colVerts.push([-hl, 0,  hw2]);  // 3 base front-left
+        const hw2 = hw;
+        const thl = hl * topPct;
+        const thw = hw2 * topPct;
+
+        // --- Frustum body (8 verts, indices 0-7) ---
+        colVerts.push([-hl, 0, -hw2]);   // 0 base back-left
+        colVerts.push([ hl, 0, -hw2]);   // 1 base back-right
+        colVerts.push([ hl, 0,  hw2]);   // 2 base front-right
+        colVerts.push([-hl, 0,  hw2]);   // 3 base front-left
         colVerts.push([-thl, hh, -thw]); // 4 top back-left
         colVerts.push([ thl, hh, -thw]); // 5 top back-right
         colVerts.push([ thl, hh,  thw]); // 6 top front-right
@@ -15948,6 +16121,45 @@ function generateDIYFromEditorObject(name) {
         colPolys.push({ sides: 4, attr: 2097152, indices: [1, 0, 4, 5] }); // back
         colPolys.push({ sides: 4, attr: 2097152, indices: [2, 1, 5, 6] }); // right
         colPolys.push({ sides: 4, attr: 2097152, indices: [0, 3, 7, 4] }); // left
+
+        // --- Bank ramp (4 verts, indices 8-11) ---
+        const bw = (width / 100) * scale * 0.30 / 2;
+        const bx = thl - bw;
+        const bankBaseDepth = (hw2 - thw) * 1.8;
+        colVerts.push([bx - bw * 1.3, 0, thw + bankBaseDepth]);  // 8 bottom-left
+        colVerts.push([bx + bw * 1.3, 0, thw + bankBaseDepth]);  // 9 bottom-right
+        colVerts.push([bx + bw, hh, thw]);                        // 10 top-right
+        colVerts.push([bx - bw, hh, thw]);                        // 11 top-left
+        // Bank surface (ramp attribute)
+        colPolys.push({ sides: 4, attr: 2097152, indices: [8, 9, 10, 11] });
+
+        // --- Grind box (8 verts, indices 12-19) ---
+        const boxW = (width / 100) * scale * 0.25;
+        const boxH = hh * 0.6;
+        const boxL = (length / 100) * scale * 0.18;
+        const boxCZ = thw - boxL / 2;
+        const boxCX = thl - boxW / 2;
+        const bxl = boxCX - boxW / 2;
+        const bxr = boxCX + boxW / 2;
+        const bzb = boxCZ - boxL / 2;
+        const bzf = boxCZ + boxL / 2;
+        const boxBot = hh;
+        const boxTop = hh + boxH;
+        colVerts.push([bxl, boxBot, bzb]); // 12
+        colVerts.push([bxr, boxBot, bzb]); // 13
+        colVerts.push([bxr, boxBot, bzf]); // 14
+        colVerts.push([bxl, boxBot, bzf]); // 15
+        colVerts.push([bxl, boxTop, bzb]); // 16
+        colVerts.push([bxr, boxTop, bzb]); // 17
+        colVerts.push([bxr, boxTop, bzf]); // 18
+        colVerts.push([bxl, boxTop, bzf]); // 19
+        // Box top (grindable flat)
+        colPolys.push({ sides: 4, attr: 1310720, indices: [16, 17, 18, 19] });
+        // Box sides (walls)
+        colPolys.push({ sides: 4, attr: 0, indices: [12, 13, 17, 16] }); // back
+        colPolys.push({ sides: 4, attr: 0, indices: [14, 15, 19, 18] }); // front
+        colPolys.push({ sides: 4, attr: 0, indices: [13, 14, 18, 17] }); // right
+        colPolys.push({ sides: 4, attr: 0, indices: [15, 12, 16, 19] }); // left
 
     } else {
         // Default: simple box collision
@@ -16032,14 +16244,26 @@ function generateDIYFromEditorObject(name) {
             const hh = (height / 100) * scale;
             const thl = (length / 200) * scale * topPct;
             const thw = hw * topPct;
-            // Front edge
+            // Pyramid top edges
             edges.push({ x1: -thl, y1: hh, z1: thw, x2: thl, y2: hh, z2: thw });
-            // Back edge
             edges.push({ x1: thl, y1: hh, z1: -thw, x2: -thl, y2: hh, z2: -thw });
-            // Right edge
             edges.push({ x1: thl, y1: hh, z1: thw, x2: thl, y2: hh, z2: -thw });
-            // Left edge
             edges.push({ x1: -thl, y1: hh, z1: -thw, x2: -thl, y2: hh, z2: thw });
+            // Grind box top edges
+            const boxW = (width / 100) * scale * 0.25;
+            const boxH = hh * 0.6;
+            const boxL = (length / 100) * scale * 0.18;
+            const boxCZ = thw - boxL / 2;
+            const boxCX = thl - boxW / 2;
+            const bxl = boxCX - boxW / 2;
+            const bxr = boxCX + boxW / 2;
+            const bzb = boxCZ - boxL / 2;
+            const bzf = boxCZ + boxL / 2;
+            const boxTopY = hh + boxH;
+            edges.push({ x1: bxl, y1: boxTopY, z1: bzf, x2: bxr, y2: boxTopY, z2: bzf });
+            edges.push({ x1: bxr, y1: boxTopY, z1: bzb, x2: bxl, y2: boxTopY, z2: bzb });
+            edges.push({ x1: bxr, y1: boxTopY, z1: bzf, x2: bxr, y2: boxTopY, z2: bzb });
+            edges.push({ x1: bxl, y1: boxTopY, z1: bzb, x2: bxl, y2: boxTopY, z2: bzf });
         }
     } else if (!isRamp && settings.grindTop) {
         const hh = (height / 100) * scale;
