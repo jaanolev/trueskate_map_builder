@@ -15078,13 +15078,15 @@ function updateEditorObject() {
                     pyramidGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(backPts), edgeMat));
                     pyramidGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(rightPts), edgeMat));
                     pyramidGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(leftPts), edgeMat));
-                    // Box grind edges
-                    const boxW = w * 0.25;
+                    // Box grind edges - box sits at top of bank ramp
+                    const bankW_e = w * 0.30;
+                    const boxW = bankW_e * 0.9;
                     const boxH = h * 0.6;
-                    const boxL = l * 0.18;
+                    const boxL = l * 0.15;
                     const boxBaseY = h;
-                    const boxCenterZ = thw - boxL / 2;
-                    const boxCenterX = thl - boxW / 2;
+                    const bankCX_e = thl - bankW_e * 0.3;
+                    const boxCenterZ = thw; // aligned with bank top edge
+                    const boxCenterX = bankCX_e; // centered on bank
                     const boxTopY = boxBaseY + boxH;
                     const bx1 = boxCenterX - boxW / 2, bx2 = boxCenterX + boxW / 2;
                     const bz1 = boxCenterZ - boxL / 2, bz2 = boxCenterZ + boxL / 2;
@@ -15645,14 +15647,14 @@ function createPyramidEditorGroup(length, height, width, settings) {
     const bankMesh = new THREE.Mesh(bankGeo, bankMat);
     group.add(bankMesh);
 
-    // 3. Grind box/ledge on top of the pyramid near the bank
-    // Dark colored box sitting at the top surface near the front-right corner
-    const boxW = width * 0.25;   // width of box
-    const boxH = height * 0.6;   // height of box
-    const boxL = length * 0.18;  // length/depth of box
-    const boxBaseY = height;     // sits on top of the pyramid
-    const boxCenterZ = topHalfW - boxL / 2; // near front edge but on the plateau
-    const boxCenterX = topHalfL - boxW / 2; // near right edge
+    // 3. Grind box/ledge at the top of the bank ramp
+    // Sits right where the bank meets the flat top - skater rides up bank into the box
+    const boxW = bankWidth * 0.9; // slightly narrower than the bank
+    const boxH = height * 0.6;    // height of box
+    const boxL = length * 0.15;   // depth of box
+    const boxBaseY = height;      // sits on top of the pyramid
+    const boxCenterX = bankCenterX; // centered on the bank
+    const boxCenterZ = topHalfW;    // front edge aligned with bank top edge
 
     const boxGeo = new THREE.BoxGeometry(boxW, boxH, boxL);
     const boxMat = new THREE.MeshStandardMaterial({
@@ -16133,12 +16135,14 @@ function generateDIYFromEditorObject(name) {
         // Bank surface (ramp attribute)
         colPolys.push({ sides: 4, attr: 2097152, indices: [8, 9, 10, 11] });
 
-        // --- Grind box (8 verts, indices 12-19) ---
-        const boxW = (width / 100) * scale * 0.25;
+        // --- Grind box (8 verts, indices 12-19) --- sits at top of bank
+        const bankW_col = (width / 100) * scale * 0.30;
+        const boxW = bankW_col * 0.9;
         const boxH = hh * 0.6;
-        const boxL = (length / 100) * scale * 0.18;
-        const boxCZ = thw - boxL / 2;
-        const boxCX = thl - boxW / 2;
+        const boxL = (length / 100) * scale * 0.15;
+        const bankCX_col = thl - bankW_col * 0.3;
+        const boxCZ = thw; // aligned with bank top edge
+        const boxCX = bankCX_col; // centered on bank
         const bxl = boxCX - boxW / 2;
         const bxr = boxCX + boxW / 2;
         const bzb = boxCZ - boxL / 2;
@@ -16249,12 +16253,14 @@ function generateDIYFromEditorObject(name) {
             edges.push({ x1: thl, y1: hh, z1: -thw, x2: -thl, y2: hh, z2: -thw });
             edges.push({ x1: thl, y1: hh, z1: thw, x2: thl, y2: hh, z2: -thw });
             edges.push({ x1: -thl, y1: hh, z1: -thw, x2: -thl, y2: hh, z2: thw });
-            // Grind box top edges
-            const boxW = (width / 100) * scale * 0.25;
+            // Grind box top edges - box sits at top of bank
+            const bankW_edge = (width / 100) * scale * 0.30;
+            const boxW = bankW_edge * 0.9;
             const boxH = hh * 0.6;
-            const boxL = (length / 100) * scale * 0.18;
-            const boxCZ = thw - boxL / 2;
-            const boxCX = thl - boxW / 2;
+            const boxL = (length / 100) * scale * 0.15;
+            const bankCX_edge = thl - bankW_edge * 0.3;
+            const boxCZ = thw; // aligned with bank top edge
+            const boxCX = bankCX_edge; // centered on bank
             const bxl = boxCX - boxW / 2;
             const bxr = boxCX + boxW / 2;
             const bzb = boxCZ - boxL / 2;
