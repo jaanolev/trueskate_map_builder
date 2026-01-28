@@ -14655,9 +14655,9 @@ const editorState = {
             { name: 'Small Kicker', rampType: 'kicker', height: 30, length: 100, width: 80, curveSegments: 12, lipAngle: 25 },
             { name: 'Launch Kicker', rampType: 'kicker', height: 50, length: 120, width: 100, curveSegments: 12, lipAngle: 40 },
             { name: 'Mini Spine', rampType: 'spine', height: 80, width: 120, curveSegments: 16, copingEnabled: true, lipAngle: 90 },
-            { name: 'Low Pyramid', rampType: 'pyramid', height: 15, length: 200, width: 200, pyramidTopSize: 80, material: 'metal' },
-            { name: 'Contest Pyramid', rampType: 'pyramid', height: 20, length: 250, width: 250, pyramidTopSize: 75, material: 'metal' },
-            { name: 'Steep Pyramid', rampType: 'pyramid', height: 40, length: 200, width: 200, pyramidTopSize: 65, material: 'metal' },
+            { name: 'Low Pyramid', rampType: 'pyramid', height: 30, length: 180, width: 180, pyramidTopSize: 55, material: 'metal' },
+            { name: 'Contest Pyramid', rampType: 'pyramid', height: 45, length: 200, width: 200, pyramidTopSize: 50, material: 'metal' },
+            { name: 'Steep Pyramid', rampType: 'pyramid', height: 60, length: 180, width: 180, pyramidTopSize: 45, material: 'metal' },
         ],
         stairs: [
             { name: '3 Stair', steps: 3, height: 45 },
