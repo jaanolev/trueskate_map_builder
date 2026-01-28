@@ -14618,7 +14618,11 @@ const editorState = {
         color: '#888888',
         grindTop: true,
         grindFront: false,
-        grindBack: false
+        grindBack: false,
+        rampType: 'quarter-pipe',
+        curveSegments: 8,
+        copingEnabled: true,
+        lipAngle: 90
     },
     materials: {
         concrete: { color: 0x666666, roughness: 0.9 },
@@ -14643,10 +14647,13 @@ const editorState = {
             { name: 'Handrail', height: 90, length: 300, width: 5 }
         ],
         ramp: [
-            { name: 'Mellow Kicker', height: 30, length: 150, angle: 20 },
-            { name: 'Steep Kicker', height: 50, length: 100, angle: 35 },
-            { name: 'Quarter Pipe', height: 120, length: 200, angle: 75 },
-            { name: 'Bank', height: 60, length: 250, angle: 25 }
+            { name: 'Mini Quarter', rampType: 'quarter-pipe', height: 60, width: 100, curveSegments: 8, copingEnabled: true, lipAngle: 90 },
+            { name: 'Vert Quarter', rampType: 'quarter-pipe', height: 120, width: 150, curveSegments: 12, copingEnabled: true, lipAngle: 90 },
+            { name: 'Mellow Bank', rampType: 'bank', height: 40, length: 200, width: 100 },
+            { name: 'Steep Bank', rampType: 'bank', height: 80, length: 150, width: 100 },
+            { name: 'Small Kicker', rampType: 'kicker', height: 30, length: 100, width: 80, curveSegments: 6, lipAngle: 25 },
+            { name: 'Launch Kicker', rampType: 'kicker', height: 50, length: 120, width: 100, curveSegments: 8, lipAngle: 40 },
+            { name: 'Mini Spine', rampType: 'spine', height: 80, width: 120, curveSegments: 8, copingEnabled: true, lipAngle: 90 },
         ],
         stairs: [
             { name: '3 Stair', steps: 3, height: 45 },
@@ -14729,10 +14736,53 @@ function setupEditorListeners() {
             document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             editorState.objectType = btn.dataset.objType;
+            // Show/hide ramp sub-type selector and controls
+            const rampSelector = document.getElementById('ramp-subtype-selector');
+            const rampControls = document.getElementById('ramp-controls');
+            if (rampSelector) rampSelector.classList.toggle('hidden', btn.dataset.objType !== 'ramp');
+            if (rampControls) rampControls.classList.toggle('hidden', btn.dataset.objType !== 'ramp');
             loadPresetsForType(editorState.objectType);
             updateEditorObject();
         });
     });
+
+    // Ramp sub-type buttons
+    document.querySelectorAll('.ramp-type-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.ramp-type-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            editorState.settings.rampType = btn.dataset.rampType;
+            // Show/hide lip angle based on sub-type (banks don't need it)
+            const lipControl = document.getElementById('lip-angle-control');
+            if (lipControl) lipControl.style.display = btn.dataset.rampType === 'bank' ? 'none' : '';
+            updateEditorObject();
+        });
+    });
+
+    // Ramp curve controls
+    const curveSlider = document.getElementById('edit-curve-segments');
+    if (curveSlider) {
+        curveSlider.addEventListener('input', () => {
+            editorState.settings.curveSegments = parseInt(curveSlider.value);
+            document.getElementById('curve-segments-value').textContent = curveSlider.value;
+            updateEditorObject();
+        });
+    }
+    const lipSlider = document.getElementById('edit-lip-angle');
+    if (lipSlider) {
+        lipSlider.addEventListener('input', () => {
+            editorState.settings.lipAngle = parseInt(lipSlider.value);
+            document.getElementById('lip-angle-value').textContent = lipSlider.value;
+            updateEditorObject();
+        });
+    }
+    const copingCheckbox = document.getElementById('coping-enabled');
+    if (copingCheckbox) {
+        copingCheckbox.addEventListener('change', () => {
+            editorState.settings.copingEnabled = copingCheckbox.checked;
+            updateEditorObject();
+        });
+    }
     
     // Easy mode sliders
     ['height', 'length', 'width'].forEach(prop => {
@@ -14914,7 +14964,36 @@ function applyPreset(preset) {
             btn.classList.toggle('active', btn.dataset.material === preset.material);
         });
     }
-    
+
+    // Ramp-specific preset fields
+    if (preset.rampType) {
+        editorState.settings.rampType = preset.rampType;
+        document.querySelectorAll('.ramp-type-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.rampType === preset.rampType);
+        });
+        const lipControl = document.getElementById('lip-angle-control');
+        if (lipControl) lipControl.style.display = preset.rampType === 'bank' ? 'none' : '';
+    }
+    if (preset.curveSegments !== undefined) {
+        editorState.settings.curveSegments = preset.curveSegments;
+        const slider = document.getElementById('edit-curve-segments');
+        const display = document.getElementById('curve-segments-value');
+        if (slider) slider.value = preset.curveSegments;
+        if (display) display.textContent = preset.curveSegments;
+    }
+    if (preset.lipAngle !== undefined) {
+        editorState.settings.lipAngle = preset.lipAngle;
+        const slider = document.getElementById('edit-lip-angle');
+        const display = document.getElementById('lip-angle-value');
+        if (slider) slider.value = preset.lipAngle;
+        if (display) display.textContent = preset.lipAngle;
+    }
+    if (preset.copingEnabled !== undefined) {
+        editorState.settings.copingEnabled = preset.copingEnabled;
+        const checkbox = document.getElementById('coping-enabled');
+        if (checkbox) checkbox.checked = preset.copingEnabled;
+    }
+
     updateEditorObject();
 }
 
@@ -14970,10 +15049,32 @@ function updateEditorObject() {
     
     // Create mesh
     const mesh = new THREE.Mesh(geometry, threeMaterial);
-    mesh.position.y = h / 2;
-    
+    const isRamp = editorState.objectType === 'ramp';
+    mesh.position.y = isRamp ? 0 : h / 2;
+
     // Add grind edge indicators
-    if (editorState.settings.grindTop) {
+    if (isRamp && editorState.settings.copingEnabled) {
+        // Show coping at the lip of the ramp
+        const edgeMat = new THREE.LineBasicMaterial({ color: 0x00ff88, linewidth: 2 });
+        const rampType = editorState.settings.rampType;
+        const radius = h;
+        const angleMax = (editorState.settings.lipAngle / 90) * (Math.PI / 2);
+        const lipX = radius * Math.sin(angleMax);
+        const lipY = radius * (1 - Math.cos(angleMax));
+        let points;
+        if (rampType === 'spine') {
+            points = [new THREE.Vector3(-lipX, lipY, -w/2), new THREE.Vector3(-lipX, lipY, w/2)];
+            const points2 = [new THREE.Vector3(lipX, lipY, -w/2), new THREE.Vector3(lipX, lipY, w/2)];
+            const edgeGeo2 = new THREE.BufferGeometry().setFromPoints(points2);
+            mesh.add(new THREE.Line(edgeGeo2, edgeMat));
+        } else if (rampType === 'kicker') {
+            points = [new THREE.Vector3(l/2, h, -w/2), new THREE.Vector3(l/2, h, w/2)];
+        } else {
+            points = [new THREE.Vector3(lipX, lipY, -w/2), new THREE.Vector3(lipX, lipY, w/2)];
+        }
+        const edgeGeo = new THREE.BufferGeometry().setFromPoints(points);
+        mesh.add(new THREE.Line(edgeGeo, edgeMat));
+    } else if (!isRamp && editorState.settings.grindTop) {
         const edgeMat = new THREE.LineBasicMaterial({ color: 0x00ff88 });
         const points = [
             new THREE.Vector3(-l/2, h/2, -w/2),
@@ -14989,23 +15090,333 @@ function updateEditorObject() {
 }
 
 function createRampGeometry(length, height, width) {
+    const { rampType, curveSegments, lipAngle } = editorState.settings;
+    switch (rampType) {
+        case 'quarter-pipe':
+            return createQuarterPipeEditorGeometry(height, width, curveSegments, lipAngle);
+        case 'bank':
+            return createBankEditorGeometry(length, height, width);
+        case 'kicker':
+            return createKickerEditorGeometry(length, height, width, curveSegments, lipAngle);
+        case 'spine':
+            return createSpineEditorGeometry(height, width, curveSegments, lipAngle);
+        default:
+            return createQuarterPipeEditorGeometry(height, width, curveSegments, lipAngle);
+    }
+}
+
+function createQuarterPipeEditorGeometry(height, width, segments, lipAngle) {
+    // Quarter pipe: curved arc from flat to lip angle
+    const radius = height; // radius = height for a proper quarter pipe
+    const angleMax = (lipAngle / 90) * (Math.PI / 2);
+    const halfW = width / 2;
+    const numPts = segments + 1;
+
+    // Generate curve profile points (in XY plane, X = depth, Y = height)
+    const profile = [];
+    for (let i = 0; i < numPts; i++) {
+        const t = i / segments;
+        const angle = angleMax * t;
+        const x = radius * Math.sin(angle);
+        const y = radius * (1 - Math.cos(angle));
+        // Normal perpendicular to the curve (pointing outward/upward)
+        const nx = -Math.sin(angle);
+        const ny = Math.cos(angle);
+        profile.push({ x, y, nx, ny });
+    }
+
+    // Build BufferGeometry
+    const positions = [];
+    const normals = [];
+    const uvs = [];
+    const indices = [];
+
+    // Compute arc lengths for UV mapping
+    const arcLengths = [0];
+    for (let i = 1; i < numPts; i++) {
+        const dx = profile[i].x - profile[i-1].x;
+        const dy = profile[i].y - profile[i-1].y;
+        arcLengths.push(arcLengths[i-1] + Math.sqrt(dx*dx + dy*dy));
+    }
+    const totalArc = arcLengths[numPts - 1];
+
+    // Transition surface: 2 vertices per profile point (front and back edges)
+    for (let i = 0; i < numPts; i++) {
+        const p = profile[i];
+        const u = totalArc > 0 ? arcLengths[i] / totalArc : 0;
+        // Front edge (z = -halfW)
+        positions.push(p.x, p.y, -halfW);
+        normals.push(p.nx, p.ny, 0);
+        uvs.push(u, 0);
+        // Back edge (z = +halfW)
+        positions.push(p.x, p.y, halfW);
+        normals.push(p.nx, p.ny, 0);
+        uvs.push(u, 1);
+    }
+
+    // Transition surface triangles
+    for (let i = 0; i < segments; i++) {
+        const a = i * 2, b = i * 2 + 1, c = (i+1) * 2, d = (i+1) * 2 + 1;
+        indices.push(a, c, b);
+        indices.push(b, c, d);
+    }
+
+    // Bottom face (flat, y=0)
+    const baseIdx = positions.length / 3;
+    const bottomLen = profile[0].x; // should be 0 for quarter pipe starting at origin
+    const topX = profile[numPts-1].x;
+    // Bottom quad: from x=0 to x=topX at y=0
+    positions.push(0, 0, -halfW);  normals.push(0, -1, 0); uvs.push(0, 0);
+    positions.push(0, 0, halfW);   normals.push(0, -1, 0); uvs.push(0, 1);
+    positions.push(topX, 0, -halfW); normals.push(0, -1, 0); uvs.push(1, 0);
+    positions.push(topX, 0, halfW);  normals.push(0, -1, 0); uvs.push(1, 1);
+    indices.push(baseIdx, baseIdx+1, baseIdx+2);
+    indices.push(baseIdx+1, baseIdx+3, baseIdx+2);
+
+    // Back wall (vertical face at x=topX from y=0 to y=topY)
+    const topY = profile[numPts-1].y;
+    const wallIdx = positions.length / 3;
+    positions.push(topX, 0, -halfW);    normals.push(1, 0, 0); uvs.push(0, 0);
+    positions.push(topX, 0, halfW);     normals.push(1, 0, 0); uvs.push(1, 0);
+    positions.push(topX, topY, -halfW);  normals.push(1, 0, 0); uvs.push(0, 1);
+    positions.push(topX, topY, halfW);   normals.push(1, 0, 0); uvs.push(1, 1);
+    indices.push(wallIdx, wallIdx+2, wallIdx+1);
+    indices.push(wallIdx+1, wallIdx+2, wallIdx+3);
+
+    // Side faces (triangulated profile shape on each side)
+    // Left side (z = -halfW)
+    const leftIdx = positions.length / 3;
+    for (let i = 0; i < numPts; i++) {
+        positions.push(profile[i].x, profile[i].y, -halfW);
+        normals.push(0, 0, -1);
+        uvs.push(profile[i].x / topX, profile[i].y / topY);
+    }
+    // Add bottom-back corner
+    positions.push(topX, 0, -halfW);
+    normals.push(0, 0, -1);
+    uvs.push(1, 0);
+    // Triangulate left side as a fan from first point
+    for (let i = 1; i < numPts; i++) {
+        indices.push(leftIdx, leftIdx + i, leftIdx + i + 1 <= leftIdx + numPts ? leftIdx + i + 1 : leftIdx + numPts);
+    }
+    // Last triangle connecting to bottom-back corner
+    indices.push(leftIdx, leftIdx + numPts - 1, leftIdx + numPts);
+
+    // Right side (z = +halfW) - same but mirrored winding
+    const rightIdx = positions.length / 3;
+    for (let i = 0; i < numPts; i++) {
+        positions.push(profile[i].x, profile[i].y, halfW);
+        normals.push(0, 0, 1);
+        uvs.push(profile[i].x / topX, profile[i].y / topY);
+    }
+    positions.push(topX, 0, halfW);
+    normals.push(0, 0, 1);
+    uvs.push(1, 0);
+    for (let i = 1; i < numPts; i++) {
+        indices.push(rightIdx, rightIdx + i + 1 <= rightIdx + numPts ? rightIdx + i + 1 : rightIdx + numPts, rightIdx + i);
+    }
+    indices.push(rightIdx, rightIdx + numPts, rightIdx + numPts - 1);
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geo.setIndex(indices);
+    return geo;
+}
+
+function createBankEditorGeometry(length, height, width) {
+    // Bank: simple angled flat surface (wedge/triangular prism)
+    const halfW = width / 2;
+    const positions = [
+        // Slope surface (2 triangles)
+        0, 0, -halfW,    length, 0, -halfW,    0, height, -halfW,
+        length, 0, halfW, 0, 0, halfW,          0, height, halfW,
+        // Top slope face
+        0, height, -halfW, length, 0, -halfW,  length, 0, halfW,
+        0, height, -halfW, length, 0, halfW,    0, height, halfW,
+        // Bottom face
+        0, 0, -halfW, 0, 0, halfW,             length, 0, halfW,
+        0, 0, -halfW, length, 0, halfW,        length, 0, -halfW,
+        // Back face (vertical)
+        0, 0, -halfW, 0, height, -halfW,       0, height, halfW,
+        0, 0, -halfW, 0, height, halfW,        0, 0, halfW,
+    ];
+
     const shape = new THREE.Shape();
     shape.moveTo(0, 0);
     shape.lineTo(length, 0);
-    shape.lineTo(length, height);
+    shape.lineTo(0, height);
     shape.lineTo(0, 0);
-    
-    const extrudeSettings = {
-        steps: 1,
-        depth: width,
-        bevelEnabled: false
-    };
-    
-    const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-    geometry.translate(-length/2, -height/2, -width/2);
-    geometry.rotateY(Math.PI / 2);
-    
-    return geometry;
+
+    const geo = new THREE.ExtrudeGeometry(shape, { steps: 1, depth: width, bevelEnabled: false });
+    geo.translate(-length/2, 0, -width/2);
+    return geo;
+}
+
+function createKickerEditorGeometry(length, height, width, segments, lipAngle) {
+    // Kicker: starts flat then curves up at the end
+    const halfW = width / 2;
+    const numPts = segments + 1;
+
+    // Generate curve using quadratic bezier
+    // Start flat, curve up at the end
+    const profile = [];
+    for (let i = 0; i < numPts; i++) {
+        const t = i / segments;
+        // Quadratic bezier: P0=(0,0), P1=(length*0.7, 0), P2=(length, height)
+        const mt = 1 - t;
+        const x = mt*mt*0 + 2*mt*t*(length*0.7) + t*t*length;
+        const y = mt*mt*0 + 2*mt*t*0 + t*t*height;
+        // Tangent for normal calculation
+        const tx = 2*mt*(length*0.7) + 2*t*(length - length*0.7);
+        const ty = 2*t*height;
+        const tLen = Math.sqrt(tx*tx + ty*ty) || 1;
+        // Normal is perpendicular to tangent (rotate 90 CCW)
+        profile.push({ x, y, nx: -ty/tLen, ny: tx/tLen });
+    }
+
+    const positions = [];
+    const normalsArr = [];
+    const uvsArr = [];
+    const idxs = [];
+
+    // Arc lengths for UV
+    const arcLens = [0];
+    for (let i = 1; i < numPts; i++) {
+        const dx = profile[i].x - profile[i-1].x;
+        const dy = profile[i].y - profile[i-1].y;
+        arcLens.push(arcLens[i-1] + Math.sqrt(dx*dx + dy*dy));
+    }
+    const totalArc = arcLens[numPts-1];
+
+    // Curved surface
+    for (let i = 0; i < numPts; i++) {
+        const p = profile[i];
+        const u = totalArc > 0 ? arcLens[i] / totalArc : 0;
+        positions.push(p.x, p.y, -halfW);
+        normalsArr.push(p.nx, p.ny, 0);
+        uvsArr.push(u, 0);
+        positions.push(p.x, p.y, halfW);
+        normalsArr.push(p.nx, p.ny, 0);
+        uvsArr.push(u, 1);
+    }
+    for (let i = 0; i < segments; i++) {
+        const a = i*2, b = i*2+1, c = (i+1)*2, d = (i+1)*2+1;
+        idxs.push(a, c, b);
+        idxs.push(b, c, d);
+    }
+
+    // Bottom face
+    const bi = positions.length / 3;
+    positions.push(0, 0, -halfW); normalsArr.push(0, -1, 0); uvsArr.push(0, 0);
+    positions.push(0, 0, halfW);  normalsArr.push(0, -1, 0); uvsArr.push(0, 1);
+    positions.push(length, 0, -halfW); normalsArr.push(0, -1, 0); uvsArr.push(1, 0);
+    positions.push(length, 0, halfW);  normalsArr.push(0, -1, 0); uvsArr.push(1, 1);
+    idxs.push(bi, bi+1, bi+2);
+    idxs.push(bi+1, bi+3, bi+2);
+
+    // Side faces (left z=-halfW, right z=+halfW)
+    const li = positions.length / 3;
+    for (let i = 0; i < numPts; i++) {
+        positions.push(profile[i].x, profile[i].y, -halfW);
+        normalsArr.push(0, 0, -1);
+        uvsArr.push(profile[i].x / length, profile[i].y / (height || 1));
+    }
+    positions.push(length, 0, -halfW); normalsArr.push(0, 0, -1); uvsArr.push(1, 0);
+    positions.push(0, 0, -halfW); normalsArr.push(0, 0, -1); uvsArr.push(0, 0);
+    const leftCount = numPts + 2;
+    for (let i = 1; i < leftCount - 1; i++) {
+        idxs.push(li, li + i, li + i + 1);
+    }
+
+    const ri = positions.length / 3;
+    for (let i = 0; i < numPts; i++) {
+        positions.push(profile[i].x, profile[i].y, halfW);
+        normalsArr.push(0, 0, 1);
+        uvsArr.push(profile[i].x / length, profile[i].y / (height || 1));
+    }
+    positions.push(length, 0, halfW); normalsArr.push(0, 0, 1); uvsArr.push(1, 0);
+    positions.push(0, 0, halfW); normalsArr.push(0, 0, 1); uvsArr.push(0, 0);
+    for (let i = 1; i < leftCount - 1; i++) {
+        idxs.push(ri, ri + i + 1, ri + i);
+    }
+
+    // Center the geometry
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(normalsArr, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvsArr, 2));
+    geo.setIndex(idxs);
+    geo.translate(-length/2, 0, 0);
+    return geo;
+}
+
+function createSpineEditorGeometry(height, width, segments, lipAngle) {
+    // Spine: two quarter pipes mirrored back-to-back
+    const radius = height;
+    const angleMax = (lipAngle / 90) * (Math.PI / 2);
+    const halfW = width / 2;
+    const numPts = segments + 1;
+
+    const profile = [];
+    for (let i = 0; i < numPts; i++) {
+        const t = i / segments;
+        const angle = angleMax * t;
+        profile.push({
+            x: radius * Math.sin(angle),
+            y: radius * (1 - Math.cos(angle)),
+            nx: -Math.sin(angle),
+            ny: Math.cos(angle)
+        });
+    }
+
+    const positions = [];
+    const normalsArr = [];
+    const uvsArr = [];
+    const idxs = [];
+
+    // Left quarter (mirrored: x negated)
+    for (let i = 0; i < numPts; i++) {
+        const p = profile[i];
+        positions.push(-p.x, p.y, -halfW); normalsArr.push(-p.nx, p.ny, 0); uvsArr.push(i/segments, 0);
+        positions.push(-p.x, p.y, halfW);  normalsArr.push(-p.nx, p.ny, 0); uvsArr.push(i/segments, 1);
+    }
+    for (let i = 0; i < segments; i++) {
+        const a = i*2, b = i*2+1, c = (i+1)*2, d = (i+1)*2+1;
+        idxs.push(a, b, c);
+        idxs.push(b, d, c);
+    }
+
+    // Right quarter (normal direction)
+    const offset = positions.length / 3;
+    for (let i = 0; i < numPts; i++) {
+        const p = profile[i];
+        positions.push(p.x, p.y, -halfW); normalsArr.push(p.nx, p.ny, 0); uvsArr.push(i/segments, 0);
+        positions.push(p.x, p.y, halfW);  normalsArr.push(p.nx, p.ny, 0); uvsArr.push(i/segments, 1);
+    }
+    for (let i = 0; i < segments; i++) {
+        const a = offset+i*2, b = offset+i*2+1, c = offset+(i+1)*2, d = offset+(i+1)*2+1;
+        idxs.push(a, c, b);
+        idxs.push(b, c, d);
+    }
+
+    // Bottom face
+    const topX = profile[numPts-1].x;
+    const bi = positions.length / 3;
+    positions.push(-topX, 0, -halfW); normalsArr.push(0, -1, 0); uvsArr.push(0, 0);
+    positions.push(-topX, 0, halfW);  normalsArr.push(0, -1, 0); uvsArr.push(0, 1);
+    positions.push(topX, 0, -halfW);  normalsArr.push(0, -1, 0); uvsArr.push(1, 0);
+    positions.push(topX, 0, halfW);   normalsArr.push(0, -1, 0); uvsArr.push(1, 1);
+    idxs.push(bi, bi+1, bi+2);
+    idxs.push(bi+1, bi+3, bi+2);
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(normalsArr, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvsArr, 2));
+    geo.setIndex(idxs);
+    return geo;
 }
 
 function createStairsGeometry(length, height, width, steps) {
@@ -15076,23 +15487,67 @@ function addEditorObjectToMap() {
     
     // Use existing object creation flow
     let obj;
-    
+    let defKey;
+
     switch (objectType) {
         case 'ledge':
-            obj = OBJECT_DEFINITIONS['ledge'].create();
-            obj.userData.props = { ...OBJECT_DEFINITIONS['ledge'].defaultProps, ...props };
+            defKey = 'ledge';
+            obj = OBJECT_DEFINITIONS[defKey].create({ ...OBJECT_DEFINITIONS[defKey].defaultProps, ...props });
+            obj.userData.props = { ...OBJECT_DEFINITIONS[defKey].defaultProps, ...props };
             break;
         case 'rail':
-            obj = OBJECT_DEFINITIONS['rail-flat'].create();
-            obj.userData.props = { ...OBJECT_DEFINITIONS['rail-flat'].defaultProps, length: length / 100 };
+            defKey = 'rail-flat';
+            obj = OBJECT_DEFINITIONS[defKey].create({ ...OBJECT_DEFINITIONS[defKey].defaultProps, length: length / 100 });
+            obj.userData.props = { ...OBJECT_DEFINITIONS[defKey].defaultProps, length: length / 100 };
             break;
+        case 'ramp': {
+            const rampType = editorState.settings.rampType;
+            const rampProps = {
+                width: width / 100,
+                color: editorState.settings.color
+            };
+            switch (rampType) {
+                case 'quarter-pipe':
+                    defKey = 'quarter-pipe';
+                    rampProps.radius = height / 100;
+                    rampProps.width = width / 100;
+                    break;
+                case 'bank':
+                    defKey = 'ground-slope';
+                    rampProps.length = length / 100;
+                    rampProps.height = height / 100;
+                    rampProps.width = width / 100;
+                    break;
+                case 'kicker':
+                    defKey = 'kicker';
+                    rampProps.length = length / 100;
+                    rampProps.height = height / 100;
+                    rampProps.width = width / 100;
+                    break;
+                case 'spine':
+                    defKey = 'half-pipe';
+                    rampProps.radius = height / 100;
+                    rampProps.width = width / 100;
+                    rampProps.gap = 0; // spine has no gap
+                    break;
+                default:
+                    defKey = 'quarter-pipe';
+                    rampProps.radius = height / 100;
+                    rampProps.width = width / 100;
+            }
+            obj = OBJECT_DEFINITIONS[defKey].create({ ...OBJECT_DEFINITIONS[defKey].defaultProps, ...rampProps });
+            obj.userData.props = { ...OBJECT_DEFINITIONS[defKey].defaultProps, ...rampProps };
+            obj.userData.isRamp = true;
+            break;
+        }
         default:
-            obj = OBJECT_DEFINITIONS['ledge'].create();
-            obj.userData.props = { ...OBJECT_DEFINITIONS['ledge'].defaultProps, ...props };
+            defKey = 'ledge';
+            obj = OBJECT_DEFINITIONS[defKey].create({ ...OBJECT_DEFINITIONS[defKey].defaultProps, ...props });
+            obj.userData.props = { ...OBJECT_DEFINITIONS[defKey].defaultProps, ...props };
     }
-    
-    obj.userData.type = objectType === 'ledge' ? 'ledge' : (objectType === 'rail' ? 'rail-flat' : 'ledge');
-    obj.userData.name = `Custom ${objectType}`;
+
+    obj.userData.type = defKey;
+    obj.userData.name = `Custom ${objectType}${objectType === 'ramp' ? ' (' + editorState.settings.rampType + ')' : ''}`;
     
     // Position at center
     obj.position.set(0, 0, 0);
@@ -15130,61 +15585,164 @@ function exportEditorObjectAsDIY() {
     alert(`Exported "${name}.txt"!\nYou can now use this in DIY packs.`);
 }
 
+function getExportMaterialColor(materialName) {
+    const map = {
+        concrete: { r: 200, g: 200, b: 200 },
+        marble:   { r: 240, g: 240, b: 240 },
+        brick:    { r: 180, g: 100, b: 80 },
+        metal:    { r: 180, g: 190, b: 200 },
+        wood:     { r: 220, g: 180, b: 120 },
+        granite:  { r: 140, g: 150, b: 160 },
+    };
+    return map[materialName] || map.concrete;
+}
+
 function generateDIYFromEditorObject(name) {
-    // Get geometry from current object
+    // Get geometry from current editor object
     const geo = editorState.currentObject.geometry;
     const position = geo.attributes.position;
     const normal = geo.attributes.normal;
     const uv = geo.attributes.uv;
-    
-    const { height, length, width } = editorState.settings;
-    const matProps = editorState.materials[editorState.settings.material];
-    const color = new THREE.Color(matProps.color);
-    const r = Math.round(color.r * 255);
-    const g = Math.round(color.g * 255);
-    const b = Math.round(color.b * 255);
-    
-    // Scale to True Skate units
+
+    const settings = editorState.settings;
+    const { height, length, width } = settings;
+    const matColor = getExportMaterialColor(settings.material);
+    const isRamp = editorState.objectType === 'ramp';
     const scale = TS_SCALE;
-    
-    let lines = [];
-    
-    // VIS section
-    lines.push('<VIS ');
-    lines.push('1 #Number of Textures');
-    lines.push('gray_seamless');
-    lines.push('1 #Number of Materials');
-    lines.push('#Material 0');
-    lines.push('0 #Texture Index');
-    lines.push('1 #Material Flags');
-    lines.push('1 #Number of Meshes');
-    
-    // Mesh data
+
     const vertCount = position.count;
     const indexCount = geo.index ? geo.index.count : vertCount;
-    
-    lines.push('#Mesh 0');
-    lines.push('0 #Material Index');
-    lines.push(`${vertCount} #Number of Vertices`);
-    lines.push(`${indexCount} #Number of Indices`);
-    
-    // Vertices
+
+    const lines = [];
+
+    // ========== HEADER ==========
+    lines.push('84');
+    lines.push('65');
+    lines.push('83');
+    lines.push('75');
+    lines.push('1003 #Version');
+
+    // ========== VIS SECTION ==========
+    lines.push('<VIS ');
+    lines.push('17');
+
+    // Textures
+    lines.push('3 #Num Textures');
+    lines.push('gray_seamless');
+    lines.push('black_overlay_texture');
+    lines.push('white_lightmap_texture');
+
+    // Material (full 42-line format)
+    lines.push('1 #Num Materials');
+    lines.push('#Material');
+    lines.push('1 #Material Type (Solid)');
+    lines.push('#Color');
+    lines.push(String(matColor.r));
+    lines.push(String(matColor.g));
+    lines.push(String(matColor.b));
+    lines.push('255');
+    lines.push('1.000000 #Specular');
+    lines.push('5.583000 #G Blend Sharpness');
+    lines.push('0.858000 #G Blend Level');
+    lines.push('0.626000 #G Blend Mode');
+    lines.push('#G Shadow Color');
+    lines.push('203');
+    lines.push('203');
+    lines.push('203');
+    lines.push('255');
+    lines.push('#G Highlight Color');
+    lines.push('255');
+    lines.push('255');
+    lines.push('255');
+    lines.push('255');
+    lines.push('0.000000 #G Ignore Base Color');
+    lines.push('0.342000 #G Specular');
+    lines.push('5.500000 #B Blend Sharpness');
+    lines.push('0.800000 #B Blend Level');
+    lines.push('0.655000 #B Blend Mode');
+    lines.push('#B Shadow Color');
+    lines.push('214');
+    lines.push('214');
+    lines.push('214');
+    lines.push('255');
+    lines.push('#B Highlight Color');
+    lines.push('255');
+    lines.push('255');
+    lines.push('255');
+    lines.push('255');
+    lines.push('0.023000 #B Ignore Base Color');
+    lines.push('0.372000 #B Specular');
+    lines.push('3 #Num Layers');
+    lines.push('0 #Texture index');
+    lines.push('1');
+    lines.push('2');
+
+    // Mesh header
+    lines.push(`${vertCount} #Num Vertices`);
+    lines.push('1');
+    lines.push('#Mesh');
+    lines.push(`${indexCount} #Num Indices`);
+    lines.push(`${vertCount} #Num Vertices`);
+    lines.push('#Normals (Flags |= 0x1)');
+    lines.push('1 #Flags');
+    lines.push('2 #Num Colour Sets');
+    lines.push('2 #Num Uv Sets');
+
+    // Vertex data: 18 values per vertex
+    // Order: x,y,z, u1,v1, u2,v2, r1,g1,b1,a1, r2,g2,b2,a2, nx,ny,nz
     lines.push('#Mesh Vertices');
     for (let i = 0; i < vertCount; i++) {
-        lines.push(`${(position.getX(i) * scale).toFixed(6)} #x`);
-        lines.push(`${(position.getY(i) * scale).toFixed(6)} #y`);
-        lines.push(`${(position.getZ(i) * scale).toFixed(6)} #z`);
-        lines.push(`${normal ? normal.getX(i).toFixed(6) : '0'} #nx`);
-        lines.push(`${normal ? normal.getY(i).toFixed(6) : '1'} #ny`);
-        lines.push(`${normal ? normal.getZ(i).toFixed(6) : '0'} #nz`);
-        lines.push(`${uv ? uv.getX(i).toFixed(6) : '0'} #u`);
-        lines.push(`${uv ? (1 - uv.getY(i)).toFixed(6) : '0'} #v`);
-        lines.push(`${r} #r`);
-        lines.push(`${g} #g`);
-        lines.push(`${b} #b`);
-        lines.push('255 #a');
+        const x = (position.getX(i) * scale).toFixed(6);
+        const y = (position.getY(i) * scale).toFixed(6);
+        const z = (position.getZ(i) * scale).toFixed(6);
+        const nx = normal ? normal.getX(i).toFixed(6) : '0.000000';
+        const ny = normal ? normal.getY(i).toFixed(6) : '1.000000';
+        const nz = normal ? normal.getZ(i).toFixed(6) : '0.000000';
+        const u = uv ? uv.getX(i).toFixed(6) : '0.000000';
+        const v = uv ? uv.getY(i).toFixed(6) : '0.000000';
+
+        if (i === 0) {
+            // First vertex gets comments
+            lines.push(`${x} #x`);
+            lines.push(`${y} #y`);
+            lines.push(`${z} #z`);
+            lines.push(`${u} #u`);
+            lines.push(`${v} #v`);
+            lines.push(`${u} #u`);
+            lines.push(`${v} #v`);
+            lines.push('255 #r');
+            lines.push('255 #g');
+            lines.push('255 #b');
+            lines.push('255 #a');
+            lines.push('255 #r');
+            lines.push('255 #g');
+            lines.push('255 #b');
+            lines.push('255 #a');
+            lines.push(`${nx} #normal x`);
+            lines.push(`${ny} #normal y`);
+            lines.push(`${nz} #normal z`);
+        } else {
+            lines.push(x);
+            lines.push(y);
+            lines.push(z);
+            lines.push(u);
+            lines.push(v);
+            lines.push(u); // UV set 2 = same as set 1
+            lines.push(v);
+            lines.push('255'); // Color set 1: white
+            lines.push('255');
+            lines.push('255');
+            lines.push('255');
+            lines.push('255'); // Color set 2: white
+            lines.push('255');
+            lines.push('255');
+            lines.push('255');
+            lines.push(nx);
+            lines.push(ny);
+            lines.push(nz);
+        }
     }
-    
+
     // Indices
     lines.push('#Mesh Indices');
     if (geo.index) {
@@ -15196,61 +15754,203 @@ function generateDIYFromEditorObject(name) {
             lines.push(String(i));
         }
     }
-    
+
     lines.push('>');
-    
-    // COL section (simple box collision)
-    lines.push('<COL ');
-    lines.push('8 #Num Vertices');
-    lines.push('12 #Num Polygon Vertices');
-    lines.push('36 #Num Polygon Indices');
-    
-    // Box vertices
-    const hh = (height / 100) * scale / 2;
-    const hl = (length / 100) * scale / 2;
-    const hw = (width / 100) * scale / 2;
-    
-    const boxVerts = [
-        [-hl, -hh, -hw], [hl, -hh, -hw], [hl, -hh, hw], [-hl, -hh, hw],
-        [-hl, hh, -hw], [hl, hh, -hw], [hl, hh, hw], [-hl, hh, hw]
-    ];
-    
-    for (const v of boxVerts) {
-        lines.push(`${v[0].toFixed(6)} #x`);
-        lines.push(`${v[1].toFixed(6)} #y`);
-        lines.push(`${v[2].toFixed(6)} #z`);
-    }
-    
-    // Box faces (12 triangles)
-    const faces = [
-        [0,2,1], [0,3,2], [4,5,6], [4,6,7],
-        [0,1,5], [0,5,4], [2,3,7], [2,7,6],
-        [0,4,7], [0,7,3], [1,2,6], [1,6,5]
-    ];
-    
-    for (const face of faces) {
-        lines.push('3 #Num Sides');
-        lines.push('1310720 #Attribute'); // Ground
-        for (const idx of face) {
-            lines.push(String(idx));
+
+    // ========== COL SECTION ==========
+    // Use actual geometry for collision (simplified)
+    const colVerts = [];
+    const colPolys = [];
+    const hw = (width / 200) * scale;
+
+    if (isRamp && settings.rampType === 'quarter-pipe') {
+        // Quarter pipe collision: simplified curve + bottom + back wall
+        const radius = (height / 100) * scale;
+        const angleMax = (settings.lipAngle / 90) * (Math.PI / 2);
+        const colSegs = Math.min(settings.curveSegments, 6); // fewer segments for collision
+        const colPts = colSegs + 1;
+
+        // Generate simplified curve collision vertices (front and back)
+        for (let i = 0; i < colPts; i++) {
+            const t = i / colSegs;
+            const angle = angleMax * t;
+            const cx = radius * Math.sin(angle);
+            const cy = radius * (1 - Math.cos(angle));
+            colVerts.push([cx, cy, -hw]);
+            colVerts.push([cx, cy, hw]);
         }
+        // Bottom corners
+        const topX = radius * Math.sin(angleMax);
+        const bIdx = colVerts.length;
+        colVerts.push([topX, 0, -hw]);
+        colVerts.push([topX, 0, hw]);
+
+        // Ramp surface polygons (quads along curve)
+        for (let i = 0; i < colSegs; i++) {
+            colPolys.push({ sides: 4, attr: 2097152, indices: [i*2, (i+1)*2, (i+1)*2+1, i*2+1] });
+        }
+        // Bottom face
+        colPolys.push({ sides: 4, attr: 1310720, indices: [0, 1, bIdx+1, bIdx] });
+        // Back wall
+        const topY = radius * (1 - Math.cos(angleMax));
+        const topIdx = (colPts - 1) * 2;
+        colPolys.push({ sides: 4, attr: 0, indices: [bIdx, bIdx+1, topIdx+1, topIdx] });
+        // Side walls
+        const leftIndices = [];
+        const rightIndices = [];
+        for (let i = 0; i < colPts; i++) { leftIndices.push(i * 2); rightIndices.push(i * 2 + 1); }
+        leftIndices.push(bIdx);
+        rightIndices.push(bIdx + 1);
+        colPolys.push({ sides: leftIndices.length, attr: 0, indices: leftIndices });
+        colPolys.push({ sides: rightIndices.length, attr: 0, indices: rightIndices.slice().reverse() });
+
+    } else if (isRamp && settings.rampType === 'kicker') {
+        // Kicker collision: simplified curve + bottom
+        const h = (height / 100) * scale;
+        const l = (length / 100) * scale;
+        const colSegs = Math.min(settings.curveSegments, 6);
+        const colPts = colSegs + 1;
+
+        for (let i = 0; i < colPts; i++) {
+            const t = i / colSegs;
+            const mt = 1 - t;
+            const cx = mt*mt*0 + 2*mt*t*(l*0.7) + t*t*l;
+            const cy = mt*mt*0 + 2*mt*t*0 + t*t*h;
+            colVerts.push([cx - l/2, cy, -hw]);
+            colVerts.push([cx - l/2, cy, hw]);
+        }
+        // Bottom corners
+        const bIdx = colVerts.length;
+        colVerts.push([l/2, 0, -hw]);
+        colVerts.push([l/2, 0, hw]);
+
+        // Ramp surface
+        for (let i = 0; i < colSegs; i++) {
+            colPolys.push({ sides: 4, attr: 2097152, indices: [i*2, (i+1)*2, (i+1)*2+1, i*2+1] });
+        }
+        // Bottom
+        colPolys.push({ sides: 4, attr: 1310720, indices: [0, 1, bIdx+1, bIdx] });
+        // Sides
+        const leftIndices = [];
+        const rightIndices = [];
+        for (let i = 0; i < colPts; i++) { leftIndices.push(i * 2); rightIndices.push(i * 2 + 1); }
+        leftIndices.push(bIdx);
+        rightIndices.push(bIdx + 1);
+        colPolys.push({ sides: leftIndices.length, attr: 0, indices: leftIndices });
+        colPolys.push({ sides: rightIndices.length, attr: 0, indices: rightIndices.slice().reverse() });
+
+    } else {
+        // Default: simple box collision
+        const hh = (height / 200) * scale;
+        const hl = (length / 200) * scale;
+        colVerts.push([-hl, 0, -hw], [hl, 0, -hw], [hl, 0, hw], [-hl, 0, hw]);
+        colVerts.push([-hl, hh*2, -hw], [hl, hh*2, -hw], [hl, hh*2, hw], [-hl, hh*2, hw]);
+
+        const groundAttr = isRamp ? 2097152 : 1310720;
+        // Top
+        colPolys.push({ sides: 4, attr: groundAttr, indices: [4, 5, 6, 7] });
+        // Bottom
+        colPolys.push({ sides: 4, attr: 1310720, indices: [3, 2, 1, 0] });
+        // Sides
+        colPolys.push({ sides: 4, attr: 0, indices: [0, 1, 5, 4] });
+        colPolys.push({ sides: 4, attr: 0, indices: [2, 3, 7, 6] });
+        colPolys.push({ sides: 4, attr: 0, indices: [0, 4, 7, 3] });
+        colPolys.push({ sides: 4, attr: 0, indices: [1, 2, 6, 5] });
     }
-    
+
+    // Count total polygon indices
+    let totalPolyIndices = 0;
+    colPolys.forEach(p => totalPolyIndices += p.sides);
+
+    lines.push('<COL ');
+    lines.push(`${colVerts.length} #Num Vertices`);
+    lines.push(`${colPolys.length} #Num Polygon Vertices`);
+    lines.push(`${totalPolyIndices} #Num Polygon Indices`);
+    lines.push('#Vertices');
+    colVerts.forEach((v, i) => {
+        if (i === 0) {
+            lines.push(`${v[0].toFixed(6)} #x`);
+            lines.push(`${v[1].toFixed(6)} #y`);
+            lines.push(`${v[2].toFixed(6)} #z`);
+        } else {
+            lines.push(v[0].toFixed(6));
+            lines.push(v[1].toFixed(6));
+            lines.push(v[2].toFixed(6));
+        }
+    });
+    lines.push('#Polygons');
+    colPolys.forEach((p, i) => {
+        if (i === 0) {
+            lines.push(`${p.sides} #Num Sides`);
+            lines.push(`${p.attr} #Atttribute`);
+            p.indices.forEach((idx, j) => {
+                lines.push(j === 0 ? `${idx} #Vertex Index` : String(idx));
+            });
+        } else {
+            lines.push(String(p.sides));
+            lines.push(String(p.attr));
+            p.indices.forEach(idx => lines.push(String(idx)));
+        }
+    });
     lines.push('>');
-    
-    // EDGE section (grind edges)
-    if (editorState.settings.grindTop) {
-        lines.push('<EDGE ');
-        lines.push('1 #Num Edges');
-        lines.push(`${-hl} #x1`);
-        lines.push(`${hh} #y1`);
-        lines.push(`${-hw} #z1`);
-        lines.push(`${hl} #x2`);
-        lines.push(`${hh} #y2`);
-        lines.push(`${-hw} #z2`);
-        lines.push('>');
+
+    // ========== EDGE SECTION ==========
+    const edges = [];
+
+    if (isRamp && settings.copingEnabled) {
+        const rampType = settings.rampType;
+        if (rampType === 'quarter-pipe') {
+            const radius = (height / 100) * scale;
+            const angleMax = (settings.lipAngle / 90) * (Math.PI / 2);
+            const lipX = radius * Math.sin(angleMax);
+            const lipY = radius * (1 - Math.cos(angleMax));
+            edges.push({ x1: lipX, y1: lipY, z1: -hw, x2: lipX, y2: lipY, z2: hw });
+        } else if (rampType === 'kicker') {
+            const h = (height / 100) * scale;
+            const l = (length / 100) * scale;
+            edges.push({ x1: l/2, y1: h, z1: -hw, x2: l/2, y2: h, z2: hw });
+        } else if (rampType === 'spine') {
+            const radius = (height / 100) * scale;
+            const angleMax = (settings.lipAngle / 90) * (Math.PI / 2);
+            const lipX = radius * Math.sin(angleMax);
+            const lipY = radius * (1 - Math.cos(angleMax));
+            edges.push({ x1: -lipX, y1: lipY, z1: -hw, x2: -lipX, y2: lipY, z2: hw });
+            edges.push({ x1: lipX, y1: lipY, z1: -hw, x2: lipX, y2: lipY, z2: hw });
+        }
+    } else if (!isRamp && settings.grindTop) {
+        const hh = (height / 100) * scale;
+        const hl = (length / 200) * scale;
+        edges.push({ x1: -hl, y1: hh, z1: -hw, x2: hl, y2: hh, z2: -hw });
     }
-    
+
+    lines.push('<EDGE');
+    lines.push(`${edges.length} #Num Edges`);
+    edges.forEach((e, i) => {
+        if (i === 0) {
+            lines.push(`16777216 #Attribute`);
+            lines.push(`${e.x1.toFixed(6)} #x 1`);
+            lines.push(`${e.y1.toFixed(6)} #y 1`);
+            lines.push(`${e.z1.toFixed(6)} #z 1`);
+            lines.push(`${e.x2.toFixed(6)} #x 2`);
+            lines.push(`${e.y2.toFixed(6)} #y 2`);
+            lines.push(`${e.z2.toFixed(6)} #z 2`);
+        } else {
+            lines.push('16777216');
+            lines.push(e.x1.toFixed(6));
+            lines.push(e.y1.toFixed(6));
+            lines.push(e.z1.toFixed(6));
+            lines.push(e.x2.toFixed(6));
+            lines.push(e.y2.toFixed(6));
+            lines.push(e.z2.toFixed(6));
+        }
+    });
+    lines.push('>');
+
+    // ========== VOLU SECTION ==========
+    lines.push('<VOLU');
+    lines.push('0');
+    lines.push('>');
+
     return lines.join('\n');
 }
 

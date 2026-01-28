@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>True Skate Map Maker</title>
-    <link rel="stylesheet" href="styles.css?v=20260128">
+    <link rel="stylesheet" href="styles.css?v=20260128-ramp-editor">
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -637,7 +637,7 @@
         }
     }
     </script>
-    <script type="module" src="app.js?v=20260128-diy-pack-fix"></script>
+    <script type="module" src="app.js?v=20260128-ramp-editor"></script>
     
     <!-- Object Editor Mode -->
     <div id="object-editor" class="hidden">
@@ -690,7 +690,29 @@
                         <span>CUSTOM</span>
                     </button>
                 </div>
-                
+
+                <div id="ramp-subtype-selector" class="hidden">
+                    <h3>RAMP TYPE</h3>
+                    <div class="ramp-type-grid">
+                        <button class="ramp-type-btn active" data-ramp-type="quarter-pipe">
+                            <span class="ramp-icon">&#9697;</span>
+                            <span>QUARTER</span>
+                        </button>
+                        <button class="ramp-type-btn" data-ramp-type="bank">
+                            <span class="ramp-icon">&#9698;</span>
+                            <span>BANK</span>
+                        </button>
+                        <button class="ramp-type-btn" data-ramp-type="kicker">
+                            <span class="ramp-icon">&#8599;</span>
+                            <span>KICKER</span>
+                        </button>
+                        <button class="ramp-type-btn" data-ramp-type="spine">
+                            <span class="ramp-icon">&#8896;</span>
+                            <span>SPINE</span>
+                        </button>
+                    </div>
+                </div>
+
                 <h3>PRESETS</h3>
                 <div id="editor-presets" class="presets-list">
                     <!-- Dynamic presets based on type -->
@@ -794,6 +816,24 @@
                                 <span class="grind-label">⬅️ Back Edge</span>
                             </label>
                         </div>
+                    </div>
+
+                    <div id="ramp-controls" class="editor-section hidden">
+                        <h3>TRANSITION</h3>
+                        <div class="skater-slider">
+                            <label>Curve Smoothness</label>
+                            <input type="range" id="edit-curve-segments" min="4" max="16" value="8">
+                            <div class="slider-value"><span id="curve-segments-value">8</span> segments</div>
+                        </div>
+                        <div class="skater-slider" id="lip-angle-control">
+                            <label>Lip Angle</label>
+                            <input type="range" id="edit-lip-angle" min="15" max="90" value="90">
+                            <div class="slider-value"><span id="lip-angle-value">90</span>&deg;</div>
+                        </div>
+                        <label class="grind-option">
+                            <input type="checkbox" id="coping-enabled" checked>
+                            <span class="grind-label">Metal Coping (grindable lip)</span>
+                        </label>
                     </div>
 
                     <div class="editor-section">

@@ -2165,6 +2165,46 @@ body.resizing * {
     gap: 8px;
 }
 
+.ramp-type-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.ramp-type-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 4px;
+    background: var(--bg-dark);
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 9px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+}
+
+.ramp-type-btn:hover {
+    border-color: var(--accent-primary);
+    color: var(--text-primary);
+}
+
+.ramp-type-btn.active {
+    border-color: var(--accent-primary);
+    background: rgba(255, 60, 0, 0.1);
+    color: var(--accent-primary);
+}
+
+.ramp-icon {
+    font-size: 20px;
+    margin-bottom: 2px;
+}
+
 .type-btn {
     display: flex;
     flex-direction: column;
