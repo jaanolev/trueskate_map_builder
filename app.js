@@ -10873,9 +10873,10 @@ function parseDIYObjectComplete(content, position, rotation, scale) {
     // Support both old (single rotationY number) and new (full rotation object) formats
     // NOTE: Do NOT negate Y rotation - this was causing objects to face 180° opposite in-game
     // The editor and True Skate use the same rotation direction for Y axis
-    const rotX = typeof rotation === 'object' ? rotation.x : 0;
+    // BUT X and Z rotations (tilting) must be negated - True Skate uses opposite tilt direction
+    const rotX = typeof rotation === 'object' ? -rotation.x : 0;
     const rotY = typeof rotation === 'object' ? rotation.y : rotation;
-    const rotZ = typeof rotation === 'object' ? rotation.z : 0;
+    const rotZ = typeof rotation === 'object' ? -rotation.z : 0;
     
     // Skip header (84, 65, 83, 75 = "TASK")
     lineIndex = 4;
