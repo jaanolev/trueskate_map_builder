@@ -14620,7 +14620,7 @@ const editorState = {
         grindFront: false,
         grindBack: false,
         rampType: 'quarter-pipe',
-        curveSegments: 8,
+        curveSegments: 16,
         copingEnabled: true,
         lipAngle: 90
     },
@@ -14647,13 +14647,13 @@ const editorState = {
             { name: 'Handrail', height: 90, length: 300, width: 5 }
         ],
         ramp: [
-            { name: 'Mini Quarter', rampType: 'quarter-pipe', height: 60, width: 100, curveSegments: 8, copingEnabled: true, lipAngle: 90 },
-            { name: 'Vert Quarter', rampType: 'quarter-pipe', height: 120, width: 150, curveSegments: 12, copingEnabled: true, lipAngle: 90 },
+            { name: 'Mini Quarter', rampType: 'quarter-pipe', height: 60, width: 100, curveSegments: 16, copingEnabled: true, lipAngle: 90 },
+            { name: 'Vert Quarter', rampType: 'quarter-pipe', height: 120, width: 150, curveSegments: 16, copingEnabled: true, lipAngle: 90 },
             { name: 'Mellow Bank', rampType: 'bank', height: 40, length: 200, width: 100 },
             { name: 'Steep Bank', rampType: 'bank', height: 80, length: 150, width: 100 },
-            { name: 'Small Kicker', rampType: 'kicker', height: 30, length: 100, width: 80, curveSegments: 6, lipAngle: 25 },
-            { name: 'Launch Kicker', rampType: 'kicker', height: 50, length: 120, width: 100, curveSegments: 8, lipAngle: 40 },
-            { name: 'Mini Spine', rampType: 'spine', height: 80, width: 120, curveSegments: 8, copingEnabled: true, lipAngle: 90 },
+            { name: 'Small Kicker', rampType: 'kicker', height: 30, length: 100, width: 80, curveSegments: 12, lipAngle: 25 },
+            { name: 'Launch Kicker', rampType: 'kicker', height: 50, length: 120, width: 100, curveSegments: 12, lipAngle: 40 },
+            { name: 'Mini Spine', rampType: 'spine', height: 80, width: 120, curveSegments: 16, copingEnabled: true, lipAngle: 90 },
         ],
         stairs: [
             { name: '3 Stair', steps: 3, height: 45 },
