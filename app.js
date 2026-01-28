@@ -15470,7 +15470,8 @@ function createPyramidEditorGeometry(length, height, width, topSizePercent) {
     }
 
     // Top face (flat plateau) - skateable
-    addQuad(t0, t1, t2, t3, [0, 1, 0], 0, 0, 1, 0, 1, 1, 0, 1);
+    // CCW winding from above: back-left → front-left → front-right → back-right
+    addQuad(t0, t3, t2, t1, [0, 1, 0], 0, 0, 1, 0, 1, 1, 0, 1);
 
     // Front slope (+Z face): b3, b2, t2, t3
     const nFront = faceNormal(b3, b2, t3);
