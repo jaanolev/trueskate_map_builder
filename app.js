@@ -6096,6 +6096,8 @@ async function loadDIYPack(file) {
  */
 function parseTrueSkateObject(content, textures) {
     // ROBUST MARKER-BASED PARSER
+    // Normalize line endings: handle \r\n, \r, or \n
+    content = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     // Keep original lines WITH comments for searching
     const originalLines = content.split('\n');
     
