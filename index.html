@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>True Skate Map Maker</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260107c">
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -13,7 +13,15 @@
         <header id="top-bar">
             <h1>TRUE SKATE MAP MAKER</h1>
             <div class="header-actions">
+                <div class="undo-redo-group">
+                    <button id="btn-undo" class="btn-header btn-icon-only" title="Undo (Ctrl+Z)" disabled>↩</button>
+                    <button id="btn-redo" class="btn-header btn-icon-only" title="Redo (Ctrl+Y)" disabled>↪</button>
+                </div>
                 <button id="btn-new" class="btn-header">NEW</button>
+                <button id="btn-templates" class="btn-header">📁 LOAD</button>
+                <button id="btn-local-maps" class="btn-header btn-local">📂 LOCAL MAPS</button>
+                <button id="btn-modio" class="btn-header btn-modio">🌐 MOD.IO</button>
+                <button id="btn-object-editor" class="btn-header btn-accent">🛠️ OBJECT EDITOR</button>
                 <button id="btn-export" class="btn-header btn-primary">EXPORT</button>
             </div>
         </header>
@@ -97,16 +105,240 @@
                 <h3>Props</h3>
                 <div class="palette-grid">
                     <button class="palette-item" data-object="bench">
-                        <div class="palette-icon">⌂</div>
+                        <div class="palette-icon">🪑</div>
                         <span>Bench</span>
                     </button>
                     <button class="palette-item" data-object="trash-can">
-                        <div class="palette-icon">⌧</div>
+                        <div class="palette-icon">🗑️</div>
                         <span>Trash Can</span>
+                    </button>
+                    <button class="palette-item" data-object="picnic-table">
+                        <div class="palette-icon">🏕️</div>
+                        <span>Picnic Table</span>
+                    </button>
+                    <button class="palette-item" data-object="basketball-hoop">
+                        <div class="palette-icon">🏀</div>
+                        <span>Hoop</span>
+                    </button>
+                    <button class="palette-item" data-object="skateboard-rack">
+                        <div class="palette-icon">🛹</div>
+                        <span>Board Rack</span>
+                    </button>
+                    <button class="palette-item" data-object="graffiti-wall">
+                        <div class="palette-icon">🎨</div>
+                        <span>Graffiti</span>
                     </button>
                 </div>
             </div>
+            
+            <!-- Structure Section -->
+            <div class="palette-section">
+                <h3>Structure</h3>
+                <div class="palette-grid">
+                    <button class="palette-item" data-object="wall">
+                        <div class="palette-icon">▯</div>
+                        <span>Wall</span>
+                    </button>
+                    <button class="palette-item" data-object="pillar">
+                        <div class="palette-icon">⫿</div>
+                        <span>Pillar</span>
+                    </button>
+                    <button class="palette-item" data-object="beam">
+                        <div class="palette-icon">━</div>
+                        <span>Beam</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- ========================================
+                 ENVIRONMENT CREATOR SECTION
+                 ======================================== -->
+            <div class="palette-divider">
+                <span class="divider-text">🌍 ENVIRONMENT</span>
+            </div>
+            
+            <!-- Vegetation Section -->
+            <div class="palette-section env-section vegetation-section">
+                <h3>🌳 Vegetation</h3>
+                <div class="palette-grid">
+                    <button class="palette-item env-item" data-object="tree-oak">
+                        <div class="palette-icon">🌳</div>
+                        <span>Oak Tree</span>
+                    </button>
+                    <button class="palette-item env-item" data-object="tree-pine">
+                        <div class="palette-icon">🌲</div>
+                        <span>Pine Tree</span>
+                    </button>
+                    <button class="palette-item env-item" data-object="tree-palm">
+                        <div class="palette-icon">🌴</div>
+                        <span>Palm Tree</span>
+                    </button>
+                    <button class="palette-item env-item" data-object="bush">
+                        <div class="palette-icon">🌿</div>
+                        <span>Bush</span>
+                    </button>
+                    <button class="palette-item env-item" data-object="hedge">
+                        <div class="palette-icon">🟩</div>
+                        <span>Hedge</span>
+                    </button>
+                    <button class="palette-item env-item" data-object="flowers">
+                        <div class="palette-icon">🌸</div>
+                        <span>Flowers</span>
+                    </button>
+                    <button class="palette-item env-item" data-object="grass-patch">
+                        <div class="palette-icon">🟢</div>
+                        <span>Grass</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Buildings Section -->
+            <div class="palette-section env-section buildings-section">
+                <h3>🏠 Buildings</h3>
+                <div class="palette-grid">
+                    <button class="palette-item env-item" data-object="building-small">
+                        <div class="palette-icon">🏠</div>
+                        <span>House</span>
+                    </button>
+                    <button class="palette-item env-item" data-object="building-shop">
+                        <div class="palette-icon">🏪</div>
+                        <span>Shop</span>
+                    </button>
+                    <button class="palette-item env-item" data-object="building-garage">
+                        <div class="palette-icon">🚗</div>
+                        <span>Garage</span>
+                    </button>
+                    <button class="palette-item env-item" data-object="building-warehouse">
+                        <div class="palette-icon">🏭</div>
+                        <span>Warehouse</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Street Elements Section -->
+            <div class="palette-section env-section street-section">
+                <h3>🚧 Street</h3>
+                <div class="palette-grid">
+                    <button class="palette-item env-item" data-object="lamp-post">
+                        <div class="palette-icon">💡</div>
+                        <span>Lamp Post</span>
+                    </button>
+                    <button class="palette-item env-item" data-object="stop-sign">
+                        <div class="palette-icon">🛑</div>
+                        <span>Stop Sign</span>
+                    </button>
+                    <button class="palette-item env-item" data-object="traffic-cone">
+                        <div class="palette-icon">🔶</div>
+                        <span>Cone</span>
+                    </button>
+                    <button class="palette-item env-item" data-object="barrier">
+                        <div class="palette-icon">🚧</div>
+                        <span>Barrier</span>
+                    </button>
+                    <button class="palette-item env-item" data-object="fence-wood">
+                        <div class="palette-icon">🪵</div>
+                        <span>Wood Fence</span>
+                    </button>
+                    <button class="palette-item env-item" data-object="fence-chain">
+                        <div class="palette-icon">🔗</div>
+                        <span>Chain Fence</span>
+                    </button>
+                    <button class="palette-item env-item" data-object="fire-hydrant">
+                        <div class="palette-icon">🔴</div>
+                        <span>Hydrant</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Decorations Section -->
+            <div class="palette-section env-section decorations-section">
+                <h3>📦 Decorations</h3>
+                <div class="palette-grid">
+                    <button class="palette-item env-item" data-object="dumpster">
+                        <div class="palette-icon">🗄️</div>
+                        <span>Dumpster</span>
+                    </button>
+                    <button class="palette-item env-item" data-object="crate">
+                        <div class="palette-icon">📦</div>
+                        <span>Crate</span>
+                    </button>
+                    <button class="palette-item env-item" data-object="barrel">
+                        <div class="palette-icon">🛢️</div>
+                        <span>Barrel</span>
+                    </button>
+                    <button class="palette-item env-item" data-object="car-parked">
+                        <div class="palette-icon">🚗</div>
+                        <span>Parked Car</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Spawn Points Section -->
+            <div class="palette-section spawn-points-section">
+                <h3>🛹 Spawn Points</h3>
+                <p class="section-hint">Where players start skating</p>
+                <div id="spawn-points-list" class="spawn-points-list">
+                    <!-- Spawn points will appear here -->
+                </div>
+                <button id="btn-add-spawn" class="btn-add-spawn">
+                    <span class="btn-icon">+</span> ADD SPAWN POINT
+                </button>
+            </div>
+            
+            <!-- Lighting Controls Section -->
+            <div class="palette-section lighting-section">
+                <h3>💡 Lighting</h3>
+                <div class="lighting-controls">
+                    <div class="lighting-presets">
+                        <button class="lighting-preset" data-brightness="0.5" title="Dim lighting">🌙 Dim</button>
+                        <button class="lighting-preset active" data-brightness="1.0" title="Normal lighting">☀️ Normal</button>
+                        <button class="lighting-preset" data-brightness="1.5" title="Bright lighting">🔆 Bright</button>
+                    </div>
+                    <div class="lighting-slider">
+                        <label>Brightness</label>
+                        <input type="range" id="brightness-slider" min="0.2" max="2.0" step="0.1" value="1.0">
+                        <span id="brightness-value">100%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- DIY Objects Section -->
+            <div class="palette-section diy-objects-section">
+                <h3>🛹 DIY Objects</h3>
+                <p class="section-hint">Objects from TrueSkate DIY packs</p>
+                <div class="diy-upload-zone" id="diy-upload-zone">
+                    <input type="file" id="diy-upload" accept=".zip" hidden>
+                    <label for="diy-upload" class="upload-label">
+                        <div class="upload-icon">📦</div>
+                        <span>Drop DIY pack .zip</span>
+                        <span class="upload-hint">or click to browse</span>
+                    </label>
+                </div>
+                <div id="diy-objects-list" class="palette-grid diy-objects-grid">
+                    <!-- DIY objects will appear here -->
+                </div>
+            </div>
+            
+            <!-- Custom 3D Models Section -->
+            <div class="palette-section custom-models-section">
+                <h3>🎨 Import 3D Model</h3>
+                <p class="section-hint">SketchUp, Blender, etc.</p>
+                <div class="upload-zone" id="upload-zone-3d">
+                    <input type="file" id="model-upload-3d" accept=".glb,.gltf,.obj,.dae,.fbx,.zip" hidden>
+                    <label for="model-upload-3d" class="upload-label">
+                        <div class="upload-icon">🏗️</div>
+                        <span>Import 3D Model</span>
+                        <span class="upload-hint">DAE, OBJ, GLTF, GLB, ZIP</span>
+                    </label>
+                </div>
+                <div id="imported-models-list" class="palette-grid custom-models-grid">
+                    <!-- Imported 3D models will appear here -->
+                </div>
+            </div>
         </aside>
+
+        <!-- Resize Handle - Left -->
+        <div class="resize-handle resize-handle-left" id="resize-left"></div>
 
         <!-- Main 3D Viewport -->
         <main id="viewport">
@@ -118,6 +350,9 @@
             </div>
         </main>
 
+        <!-- Resize Handle - Right -->
+        <div class="resize-handle resize-handle-right" id="resize-right"></div>
+
         <!-- Right Sidebar - Properties -->
         <aside id="properties-panel">
             <h2>PROPERTIES</h2>
@@ -125,38 +360,259 @@
                 <p>Select an object to edit its properties</p>
             </div>
             <div id="object-properties" class="hidden">
-                <div class="property-group">
-                    <label>Position</label>
-                    <div class="property-row">
-                        <span class="axis x">X</span>
-                        <input type="number" id="pos-x" step="0.1">
+                <!-- Object Info -->
+                <div class="property-group object-info">
+                    <div id="selected-object-name" class="object-name">Object Name</div>
+                    <div id="selected-object-type" class="object-type">type</div>
+                </div>
+                
+                <!-- Transform Mode Toolbar -->
+                <div class="transform-toolbar">
+                    <button class="transform-mode-btn active" data-mode="translate" title="Move (G)">
+                        <span>✥</span>
+                    </button>
+                    <button class="transform-mode-btn" data-mode="rotate" title="Rotate (R)">
+                        <span>⟳</span>
+                    </button>
+                    <button class="transform-mode-btn" data-mode="scale" title="Scale (S)">
+                        <span>⤢</span>
+                    </button>
+                    <div class="toolbar-divider"></div>
+                    <button class="snap-toggle" id="snap-toggle" title="Toggle Snap (X)">
+                        <span>⊞</span>
+                        <span class="snap-label">SNAP</span>
+                    </button>
+                </div>
+                
+                <!-- Transform Section -->
+                <div class="property-section">
+                    <div class="section-header">
+                        <span class="section-icon">📍</span>
+                        <span>Transform</span>
+                        <span class="shortcut-hint">Arrow keys to move</span>
                     </div>
-                    <div class="property-row">
-                        <span class="axis y">Y</span>
-                        <input type="number" id="pos-y" step="0.1">
+                    <div class="property-group">
+                        <label>Position</label>
+                        <div class="property-row with-buttons">
+                            <span class="axis x">X</span>
+                            <button class="adjust-btn" data-axis="x" data-delta="-1">−</button>
+                            <input type="number" id="pos-x" step="0.5">
+                            <button class="adjust-btn" data-axis="x" data-delta="1">+</button>
+                        </div>
+                        <div class="property-row with-buttons">
+                            <span class="axis y">Y</span>
+                            <button class="adjust-btn" data-axis="y" data-delta="-0.5">−</button>
+                            <input type="number" id="pos-y" step="0.5">
+                            <button class="adjust-btn" data-axis="y" data-delta="0.5">+</button>
+                        </div>
+                        <div class="property-row with-buttons">
+                            <span class="axis z">Z</span>
+                            <button class="adjust-btn" data-axis="z" data-delta="-1">−</button>
+                            <input type="number" id="pos-z" step="0.5">
+                            <button class="adjust-btn" data-axis="z" data-delta="1">+</button>
+                        </div>
                     </div>
-                    <div class="property-row">
-                        <span class="axis z">Z</span>
-                        <input type="number" id="pos-z" step="0.1">
+                    <div class="property-group">
+                        <label>Rotation</label>
+                        <div class="property-row with-buttons">
+                            <span class="axis y">Y°</span>
+                            <button class="adjust-btn" data-rot="-45">−45°</button>
+                            <input type="number" id="rot-y" step="15">
+                            <button class="adjust-btn" data-rot="45">+45°</button>
+                        </div>
+                    </div>
+                    <div class="property-group">
+                        <label>Scale</label>
+                        <div class="scale-controls">
+                            <div class="scale-row">
+                                <button class="scale-preset" data-scale="0.25">0.25x</button>
+                                <button class="scale-preset" data-scale="0.5">0.5x</button>
+                                <button class="scale-preset" data-scale="1">1x</button>
+                                <button class="scale-preset" data-scale="2">2x</button>
+                                <button class="scale-preset" data-scale="4">4x</button>
+                            </div>
+                            <div class="property-row with-buttons">
+                                <button class="adjust-btn" id="scale-down">−</button>
+                                <input type="number" id="scale-input" step="0.1" min="0.1" max="10" value="1">
+                                <button class="adjust-btn" id="scale-up">+</button>
+                            </div>
+                            <input type="range" id="scale" min="0.1" max="5" step="0.05" value="1">
+                        </div>
                     </div>
                 </div>
-                <div class="property-group">
-                    <label>Rotation</label>
-                    <div class="property-row">
-                        <span class="axis y">Y°</span>
-                        <input type="number" id="rot-y" step="15">
+                
+                <!-- Ground Snap Section -->
+                <div class="property-section snap-section">
+                    <div class="section-header">
+                        <span class="section-icon">📐</span>
+                        <span>Ground Snapping</span>
+                    </div>
+                    <div class="snap-tools-grid">
+                        <button id="btn-snap-top-zero" class="btn-tool btn-snap-top" title="Position object so its top surface is at Y=0">
+                            <span class="btn-icon">⬇️</span> TOP → 0
+                        </button>
+                        <button id="btn-snap-bottom-zero" class="btn-tool btn-snap-bottom" title="Position object so its bottom sits on Y=0">
+                            <span class="btn-icon">⬆️</span> BOTTOM → 0
+                        </button>
+                        <button id="btn-snap-to-surface" class="btn-tool btn-snap-surface" title="Drop object onto the surface below it (raycast down)">
+                            <span class="btn-icon">⬇️</span> DROP TO SURFACE
+                        </button>
+                    </div>
+                    <p class="snap-hint">Shortcuts: T = Top, B = Bottom, V = Drop to surface</p>
+                </div>
+                
+                <!-- Object Appearance Section -->
+                <div class="property-section appearance-section">
+                    <div class="section-header">
+                        <span class="section-icon">🎨</span>
+                        <span>Appearance</span>
+                    </div>
+                    <div class="appearance-controls">
+                        <div class="appearance-row">
+                            <label>Brightness</label>
+                            <input type="range" id="object-brightness" min="0.2" max="3.0" step="0.1" value="1.0">
+                            <span id="object-brightness-value">100%</span>
+                        </div>
+                        <div class="appearance-row">
+                            <label>Emissive</label>
+                            <input type="range" id="object-emissive" min="0" max="1.0" step="0.05" value="0">
+                            <span id="object-emissive-value">0%</span>
+                        </div>
+                        <div class="appearance-presets">
+                            <button class="appearance-preset" data-brightness="0.5" title="Darken object">🌙 Darker</button>
+                            <button class="appearance-preset" data-brightness="1.0" title="Reset to normal">↺ Reset</button>
+                            <button class="appearance-preset" data-brightness="2.0" title="Brighten object">☀️ Brighter</button>
+                        </div>
                     </div>
                 </div>
-                <div class="property-group">
-                    <label>Scale</label>
-                    <div class="property-row">
-                        <input type="range" id="scale" min="0.5" max="3" step="0.1" value="1">
-                        <span id="scale-value">1.0x</span>
+
+                <!-- Object Properties Section -->
+                <div class="property-section">
+                    <div class="section-header">
+                        <span class="section-icon">⚙️</span>
+                        <span>Object Properties</span>
+                    </div>
+                    <div id="custom-properties">
+                        <!-- Dynamic properties will be inserted here -->
                     </div>
                 </div>
-                <div class="property-group">
-                    <button id="btn-delete" class="btn-danger">DELETE OBJECT</button>
-                    <button id="btn-duplicate" class="btn-secondary">DUPLICATE</button>
+                
+                <!-- Custom Model Tools (shown only for uploaded models) -->
+                <div id="custom-model-tools" class="property-section" style="display: none;">
+                    <div class="section-header">
+                        <span class="section-icon">🔧</span>
+                        <span>3D Scan Tools</span>
+                    </div>
+                    <div class="mesh-tools-grid">
+                        <button id="btn-simplify" class="btn-tool" title="Reduce triangle count while preserving shape">
+                            <span class="btn-icon">✂️</span> SIMPLIFY
+                        </button>
+                    </div>
+                    <div class="vertex-warning" id="vertex-warning" style="display: none; color: #ff6b6b; padding: 8px; background: rgba(255,100,100,0.1); border-radius: 4px; margin-bottom: 8px;">
+                        ⚠️ <span id="vertex-count">0</span> vertices - Too many for True Skate!<br>
+                        <small>Max ~20,000. Use Simplify below.</small>
+                    </div>
+                    
+                    <!-- Model Adjustment Controls -->
+                    <div class="model-adjust-section" style="margin-bottom: 12px;">
+                        <div class="section-subheader" style="margin-bottom: 8px;">
+                            <span class="section-icon">🔄</span>
+                            <span>Fix Orientation</span>
+                        </div>
+                        <div class="adjust-buttons" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;">
+                            <button id="btn-flip-x" class="btn-small" title="Flip on X axis">Flip X</button>
+                            <button id="btn-flip-y" class="btn-small" title="Flip on Y axis">Flip Y</button>
+                            <button id="btn-flip-z" class="btn-small" title="Flip on Z axis">Flip Z</button>
+                            <button id="btn-rot-x" class="btn-small" title="Rotate 90° on X">Rot X</button>
+                            <button id="btn-rot-y" class="btn-small" title="Rotate 90° on Y">Rot Y</button>
+                            <button id="btn-rot-z" class="btn-small" title="Rotate 90° on Z">Rot Z</button>
+                        </div>
+                        <div style="margin-top: 8px;">
+                            <label style="font-size: 11px;">Scale:</label>
+                            <div style="display: flex; gap: 4px; align-items: center;">
+                                <button id="btn-scale-down" class="btn-small" title="Scale down 50%">½×</button>
+                                <button id="btn-scale-up" class="btn-small" title="Scale up 2x">2×</button>
+                                <button id="btn-scale-10" class="btn-small" title="Scale up 10x (inch to cm)">10×</button>
+                                <button id="btn-reset-model" class="btn-small" title="Reset to original">Reset</button>
+                            </div>
+                        </div>
+                        <div style="margin-top: 8px;">
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer;">
+                                <input type="checkbox" id="chk-wireframe"> Show Wireframe
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="simplify-options" id="simplify-options" style="display: none;">
+                        <label>Reduction:</label>
+                        <div class="simplify-presets">
+                            <button class="simplify-preset" data-reduction="0.5">50%</button>
+                            <button class="simplify-preset" data-reduction="0.75">75%</button>
+                            <button class="simplify-preset active" data-reduction="0.9">90%</button>
+                            <button class="simplify-preset" data-reduction="0.95">95%</button>
+                            <button class="simplify-preset" data-reduction="0.99">99%</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Make Skateable Section -->
+                    <div class="skateable-section">
+                        <div class="section-subheader">
+                            <span class="section-icon">🛹</span>
+                            <span>Make Skateable</span>
+                        </div>
+                        <p class="tool-hint">Convert scan to smooth skating surface</p>
+                        
+                        <div class="skateable-mode-selector">
+                            <label class="mode-option">
+                                <input type="radio" name="skateable-mode" value="heightmap" checked>
+                                <span class="mode-label">
+                                    <span class="mode-icon">🏔️</span>
+                                    <span class="mode-name">Heightmap</span>
+                                    <span class="mode-desc">Best shape + colors</span>
+                                </span>
+                            </label>
+                            <label class="mode-option">
+                                <input type="radio" name="skateable-mode" value="convex">
+                                <span class="mode-label">
+                                    <span class="mode-icon">📦</span>
+                                    <span class="mode-name">Convex Hull</span>
+                                    <span class="mode-desc">Simplest, fastest</span>
+                                </span>
+                            </label>
+                            <label class="mode-option">
+                                <input type="radio" name="skateable-mode" value="decimate">
+                                <span class="mode-label">
+                                    <span class="mode-icon">🔻</span>
+                                    <span class="mode-name">Decimate</span>
+                                    <span class="mode-desc">Keeps textures</span>
+                                </span>
+                            </label>
+                        </div>
+                        
+                        <div id="heightmap-quality" class="quality-slider">
+                            <label>Mesh: <span id="quality-value">16</span>×16</label>
+                            <input type="range" id="skateable-quality" min="8" max="32" step="4" value="16">
+                        </div>
+                        
+                        <div id="texture-resolution" class="quality-slider">
+                            <label>Texture: <span id="texture-res-value">256</span>px</label>
+                            <input type="range" id="texture-res-slider" min="128" max="1024" step="128" value="256">
+                        </div>
+                        
+                        <button id="btn-make-skateable" class="btn-tool btn-primary btn-wide" title="Convert to smooth skateable surface">
+                            <span class="btn-icon">🛹</span> MAKE SKATEABLE
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Actions Section -->
+                <div class="property-section actions-section">
+                    <button id="btn-duplicate" class="btn-secondary">
+                        <span class="btn-icon">📋</span> DUPLICATE
+                    </button>
+                    <button id="btn-delete" class="btn-danger">
+                        <span class="btn-icon">🗑️</span> DELETE
+                    </button>
                 </div>
             </div>
         </aside>
@@ -181,7 +637,609 @@
         }
     }
     </script>
-    <script type="module" src="app.js"></script>
+    <script type="module" src="app.js?v=20260111-texture-brightness3"></script>
+    
+    <!-- Object Editor Mode -->
+    <div id="object-editor" class="hidden">
+        <!-- Object Editor Header -->
+        <header id="editor-header">
+            <button id="btn-back-to-map" class="btn-header">← BACK TO MAP</button>
+            <h1>🛹 OBJECT EDITOR</h1>
+            <div class="editor-mode-switcher">
+                <button class="mode-btn active" data-editor-mode="easy">EASY</button>
+                <button class="mode-btn" data-editor-mode="advanced">ADVANCED</button>
+                <button class="mode-btn" data-editor-mode="berserk">BERSERK 🔥</button>
+            </div>
+        </header>
+
+        <div class="editor-layout">
+            <!-- Left: Object Type Selector -->
+            <aside id="editor-types">
+                <h3>WHAT ARE YOU BUILDING?</h3>
+                <div class="type-grid">
+                    <button class="type-btn active" data-obj-type="ledge">
+                        <span class="type-icon">▬</span>
+                        <span>LEDGE</span>
+                    </button>
+                    <button class="type-btn" data-obj-type="rail">
+                        <span class="type-icon">━</span>
+                        <span>RAIL</span>
+                    </button>
+                    <button class="type-btn" data-obj-type="ramp">
+                        <span class="type-icon">◢</span>
+                        <span>RAMP</span>
+                    </button>
+                    <button class="type-btn" data-obj-type="stairs">
+                        <span class="type-icon">⊏</span>
+                        <span>STAIRS</span>
+                    </button>
+                    <button class="type-btn" data-obj-type="manual-pad">
+                        <span class="type-icon">▭</span>
+                        <span>MANNY PAD</span>
+                    </button>
+                    <button class="type-btn" data-obj-type="gap">
+                        <span class="type-icon">⌒</span>
+                        <span>GAP</span>
+                    </button>
+                    <button class="type-btn" data-obj-type="box">
+                        <span class="type-icon">▢</span>
+                        <span>BOX</span>
+                    </button>
+                    <button class="type-btn" data-obj-type="custom">
+                        <span class="type-icon">✦</span>
+                        <span>CUSTOM</span>
+                    </button>
+                </div>
+                
+                <h3>PRESETS</h3>
+                <div id="editor-presets" class="presets-list">
+                    <!-- Dynamic presets based on type -->
+                </div>
+                
+                <div class="editor-import-section">
+                    <h3>IMPORT</h3>
+                    <button id="btn-import-diy" class="btn-editor-action">📦 From DIY Pack</button>
+                    <button id="btn-import-obj" class="btn-editor-action">📁 From OBJ File</button>
+                </div>
+            </aside>
+
+            <!-- Center: 3D Preview -->
+            <main id="editor-viewport">
+                <canvas id="editor-canvas"></canvas>
+                <div class="viewport-toolbar">
+                    <button class="view-btn active" data-view="3d">3D</button>
+                    <button class="view-btn" data-view="top">TOP</button>
+                    <button class="view-btn" data-view="front">FRONT</button>
+                    <button class="view-btn" data-view="side">SIDE</button>
+                </div>
+            </main>
+
+            <!-- Right: Properties -->
+            <aside id="editor-properties">
+                <!-- EASY MODE Controls -->
+                <div id="easy-mode-controls" class="editor-mode-panel">
+                    <div class="editor-section">
+                        <h3>SIZE</h3>
+                        <div class="skater-slider">
+                            <label>Height</label>
+                            <div class="slider-with-labels">
+                                <span class="label-left">Curb</span>
+                                <input type="range" id="edit-height" min="10" max="120" value="40">
+                                <span class="label-right">Hubba</span>
+                            </div>
+                            <div class="slider-value"><span id="height-value">40</span> cm</div>
+                        </div>
+                        <div class="skater-slider">
+                            <label>Length</label>
+                            <div class="slider-with-labels">
+                                <span class="label-left">Short</span>
+                                <input type="range" id="edit-length" min="50" max="500" value="200">
+                                <span class="label-right">Long</span>
+                            </div>
+                            <div class="slider-value"><span id="length-value">200</span> cm</div>
+                        </div>
+                        <div class="skater-slider">
+                            <label>Width</label>
+                            <div class="slider-with-labels">
+                                <span class="label-left">Skinny</span>
+                                <input type="range" id="edit-width" min="15" max="100" value="35">
+                                <span class="label-right">Chunky</span>
+                            </div>
+                            <div class="slider-value"><span id="width-value">35</span> cm</div>
+                        </div>
+                    </div>
+
+                    <div class="editor-section">
+                        <h3>MATERIAL</h3>
+                        <div class="material-grid" id="material-picker">
+                            <button class="material-btn active" data-material="concrete" style="background: linear-gradient(135deg, #888 0%, #666 100%);">
+                                <span class="material-name">Concrete</span>
+                            </button>
+                            <button class="material-btn" data-material="marble" style="background: linear-gradient(135deg, #ddd 0%, #aaa 100%);">
+                                <span class="material-name">Marble</span>
+                            </button>
+                            <button class="material-btn" data-material="brick" style="background: linear-gradient(135deg, #a55 0%, #833 100%);">
+                                <span class="material-name">Brick</span>
+                            </button>
+                            <button class="material-btn" data-material="metal" style="background: linear-gradient(135deg, #789 0%, #567 100%);">
+                                <span class="material-name">Metal</span>
+                            </button>
+                            <button class="material-btn" data-material="wood" style="background: linear-gradient(135deg, #a84 0%, #752 100%);">
+                                <span class="material-name">Wood</span>
+                            </button>
+                            <button class="material-btn" data-material="granite" style="background: linear-gradient(135deg, #556 0%, #334 100%);">
+                                <span class="material-name">Granite</span>
+                            </button>
+                        </div>
+                        <div class="color-picker-row">
+                            <label>Custom Color</label>
+                            <input type="color" id="edit-color" value="#888888">
+                        </div>
+                    </div>
+
+                    <div class="editor-section">
+                        <h3>GRIND ZONES</h3>
+                        <p class="hint">Click edges to make them grindable</p>
+                        <div class="grind-checkboxes">
+                            <label class="grind-option">
+                                <input type="checkbox" id="grind-top" checked>
+                                <span class="grind-label">🔝 Top Edge (waxed)</span>
+                            </label>
+                            <label class="grind-option">
+                                <input type="checkbox" id="grind-front">
+                                <span class="grind-label">➡️ Front Edge</span>
+                            </label>
+                            <label class="grind-option">
+                                <input type="checkbox" id="grind-back">
+                                <span class="grind-label">⬅️ Back Edge</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="editor-section">
+                        <h3>EXTRAS</h3>
+                        <div class="extras-checkboxes">
+                            <label class="extra-option">
+                                <input type="checkbox" id="extra-hubba">
+                                <span>Add hubba end</span>
+                            </label>
+                            <label class="extra-option">
+                                <input type="checkbox" id="extra-round-top">
+                                <span>Round top edge</span>
+                            </label>
+                            <label class="extra-option">
+                                <input type="checkbox" id="extra-coping">
+                                <span>Metal coping</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ADVANCED MODE Controls -->
+                <div id="advanced-mode-controls" class="editor-mode-panel hidden">
+                    <div class="editor-section">
+                        <h3>DIMENSIONS (exact)</h3>
+                        <div class="dimension-inputs">
+                            <div class="dim-row">
+                                <label>Height</label>
+                                <input type="number" id="adv-height" value="40" min="1" max="500"> cm
+                            </div>
+                            <div class="dim-row">
+                                <label>Length</label>
+                                <input type="number" id="adv-length" value="200" min="10" max="2000"> cm
+                            </div>
+                            <div class="dim-row">
+                                <label>Width</label>
+                                <input type="number" id="adv-width" value="35" min="5" max="500"> cm
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="editor-section">
+                        <h3>ANGLES</h3>
+                        <div class="angle-inputs">
+                            <div class="angle-row">
+                                <label>Top Slant</label>
+                                <input type="range" id="adv-top-slant" min="-45" max="45" value="0">
+                                <span id="top-slant-val">0°</span>
+                            </div>
+                            <div class="angle-row">
+                                <label>Side Taper</label>
+                                <input type="range" id="adv-side-taper" min="-30" max="30" value="0">
+                                <span id="side-taper-val">0°</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="editor-section">
+                        <h3>EDGE PROFILE</h3>
+                        <div class="edge-options">
+                            <label class="edge-option">
+                                <input type="radio" name="edge-profile" value="sharp" checked>
+                                <span class="edge-preview sharp"></span>
+                                <span>Sharp</span>
+                            </label>
+                            <label class="edge-option">
+                                <input type="radio" name="edge-profile" value="round">
+                                <span class="edge-preview round"></span>
+                                <span>Round</span>
+                            </label>
+                            <label class="edge-option">
+                                <input type="radio" name="edge-profile" value="bevel">
+                                <span class="edge-preview bevel"></span>
+                                <span>Beveled</span>
+                            </label>
+                        </div>
+                        <div class="edge-size" id="edge-size-control" style="display:none;">
+                            <label>Radius</label>
+                            <input type="range" id="edge-radius" min="1" max="10" value="3">
+                            <span id="edge-radius-val">3 cm</span>
+                        </div>
+                    </div>
+
+                    <div class="editor-section">
+                        <h3>TEXTURE</h3>
+                        <div class="texture-upload">
+                            <input type="file" id="texture-upload" accept="image/*" hidden>
+                            <label for="texture-upload" class="texture-upload-btn">
+                                📷 Upload Texture Image
+                            </label>
+                        </div>
+                        <div class="texture-controls">
+                            <div class="tex-row">
+                                <label>UV Scale</label>
+                                <input type="range" id="uv-scale" min="0.1" max="5" step="0.1" value="1">
+                                <span id="uv-scale-val">1.0</span>
+                            </div>
+                            <div class="tex-row">
+                                <label>UV Rotation</label>
+                                <input type="range" id="uv-rotation" min="0" max="360" value="0">
+                                <span id="uv-rot-val">0°</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="editor-section">
+                        <h3>COLLISION</h3>
+                        <div class="collision-options">
+                            <label class="collision-option">
+                                <input type="radio" name="collision-type" value="auto" checked>
+                                <span>Auto (from shape)</span>
+                            </label>
+                            <label class="collision-option">
+                                <input type="radio" name="collision-type" value="box">
+                                <span>Simple Box</span>
+                            </label>
+                            <label class="collision-option">
+                                <input type="radio" name="collision-type" value="custom">
+                                <span>Custom (Berserk mode)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BERSERK MODE Controls -->
+                <div id="berserk-mode-controls" class="editor-mode-panel hidden">
+                    <div class="berserk-toolbar">
+                        <div class="tool-group">
+                            <span class="tool-label">SELECT</span>
+                            <button class="tool-btn" data-tool="vertex" title="Select Vertices">⬡</button>
+                            <button class="tool-btn" data-tool="edge" title="Select Edges">╱</button>
+                            <button class="tool-btn active" data-tool="face" title="Select Faces">▢</button>
+                        </div>
+                        <div class="tool-group">
+                            <span class="tool-label">EDIT</span>
+                            <button class="tool-btn" data-tool="extrude" title="Extrude">⬆</button>
+                            <button class="tool-btn" data-tool="inset" title="Inset">◻</button>
+                            <button class="tool-btn" data-tool="bevel" title="Bevel">◢</button>
+                            <button class="tool-btn" data-tool="loop" title="Loop Cut">⊕</button>
+                        </div>
+                        <div class="tool-group">
+                            <span class="tool-label">DELETE</span>
+                            <button class="tool-btn danger" data-tool="delete" title="Delete">✕</button>
+                        </div>
+                    </div>
+
+                    <div class="editor-section">
+                        <h3>SELECTED: <span id="selection-info">Nothing</span></h3>
+                        <div id="selection-props">
+                            <p class="hint">Click on the 3D model to select faces, edges, or vertices</p>
+                        </div>
+                    </div>
+
+                    <div class="editor-section">
+                        <h3>TRANSFORM</h3>
+                        <div class="transform-inputs">
+                            <div class="transform-row">
+                                <label>Move</label>
+                                <input type="number" placeholder="X" class="small-input">
+                                <input type="number" placeholder="Y" class="small-input">
+                                <input type="number" placeholder="Z" class="small-input">
+                            </div>
+                            <div class="transform-row">
+                                <label>Scale</label>
+                                <input type="number" placeholder="X" class="small-input" value="1">
+                                <input type="number" placeholder="Y" class="small-input" value="1">
+                                <input type="number" placeholder="Z" class="small-input" value="1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="editor-section">
+                        <h3>FACE MATERIAL</h3>
+                        <div class="face-material-picker">
+                            <select id="face-material">
+                                <option value="default">Default</option>
+                                <option value="concrete">Concrete</option>
+                                <option value="metal">Metal</option>
+                                <option value="wood">Wood</option>
+                                <option value="custom">Custom Texture...</option>
+                            </select>
+                            <input type="color" id="face-color" value="#888888">
+                        </div>
+                    </div>
+
+                    <div class="editor-section">
+                        <h3>COLLISION ATTRIBUTE</h3>
+                        <select id="face-collision">
+                            <option value="1310720">Ground (flat)</option>
+                            <option value="2097152">Ramp (transition)</option>
+                            <option value="16777216">Grindable</option>
+                            <option value="0">No collision</option>
+                        </select>
+                    </div>
+
+                    <div class="editor-section">
+                        <h3>GRIND EDGES</h3>
+                        <button id="btn-mark-grind" class="btn-editor-action">
+                            ✨ Mark Selected Edge as Grindable
+                        </button>
+                        <div id="grind-edges-list" class="grind-list">
+                            <!-- List of grind edges -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons (always visible) -->
+                <div class="editor-actions">
+                    <button id="btn-save-preset" class="btn-editor-secondary">💾 Save as Preset</button>
+                    <button id="btn-add-to-map" class="btn-editor-primary">➕ ADD TO MAP</button>
+                    <button id="btn-export-diy" class="btn-editor-secondary">📤 Export as DIY</button>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Templates Modal -->
+    <div id="templates-modal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📁 Load Map / Template</h2>
+                <button class="modal-close" id="modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="template-section">
+                    <h3>🌍 ENVIRONMENTS</h3>
+                    <p class="section-hint">Choose your skate spot vibe</p>
+                    <div class="environment-grid">
+                        <button class="environment-card" data-environment="warehouse">
+                            <div class="env-preview warehouse-preview">
+                                <div class="env-icon">🏭</div>
+                            </div>
+                            <div class="env-info">
+                                <span class="env-name">Warehouse</span>
+                                <span class="env-desc">Indoor industrial vibes</span>
+                            </div>
+                        </button>
+                        <button class="environment-card" data-environment="schoolyard">
+                            <div class="env-preview school-preview">
+                                <div class="env-icon">🏫</div>
+                            </div>
+                            <div class="env-info">
+                                <span class="env-name">School Yard</span>
+                                <span class="env-desc">Outdoor sunny day</span>
+                            </div>
+                        </button>
+                        <button class="environment-card" data-environment="parkinglot">
+                            <div class="env-preview parking-preview">
+                                <div class="env-icon">🅿️</div>
+                            </div>
+                            <div class="env-info">
+                                <span class="env-name">Parking Lot</span>
+                                <span class="env-desc">Golden hour street</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="template-section">
+                    <h3>🏗️ Quick Start Templates</h3>
+                    <div class="template-grid">
+                        <button class="template-card" data-template="blank">
+                            <div class="template-icon">🆕</div>
+                            <span class="template-name">Blank</span>
+                            <span class="template-desc">Empty canvas</span>
+                        </button>
+                        <button class="template-card" data-template="starter-floor">
+                            <div class="template-icon">🛹</div>
+                            <span class="template-name">Starter</span>
+                            <span class="template-desc">Big flat area</span>
+                        </button>
+                        <button class="template-card" data-template="warehouse-diy">
+                            <div class="template-icon">🏗️</div>
+                            <span class="template-name">DIY Park</span>
+                            <span class="template-desc">Build your own</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="template-section">
+                    <h3>📤 Import Existing Map</h3>
+                    <div class="import-zone" id="map-import-zone">
+                        <input type="file" id="map-import" accept=".zip,.json" hidden>
+                        <label for="map-import" class="upload-label">
+                            <div class="upload-icon">📦</div>
+                            <span>Drop .zip or .json map file</span>
+                            <span class="upload-hint">or click to browse</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mod.io Browser Modal - Visual Thumbnail Grid -->
+    <div id="modio-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content modio-modal modio-fullscreen">
+            <div class="modal-header">
+                <h2>🌐 Choose a Map from mod.io</h2>
+                <p class="modal-subtitle">Click any map to use it as your starter!</p>
+                <button id="close-modio-modal" class="modal-close">✕</button>
+            </div>
+            <div class="modal-body modio-grid-body">
+                <div class="modio-api-key-section" id="modio-api-section">
+                    <p>⚠️ To browse all mod.io maps, you need a free API key.</p>
+                    <div class="api-key-input-row">
+                        <input type="text" id="modio-api-key" placeholder="Enter your mod.io API key...">
+                        <button id="btn-set-api-key" class="btn-small">Set Key</button>
+                        <a href="https://mod.io/me/access" target="_blank" class="btn-small btn-link">Get Free Key</a>
+                    </div>
+                    <p class="api-hint">Or use the sample maps below to get started!</p>
+                </div>
+                <div class="modio-filter-bar">
+                    <input type="text" id="modio-filter" placeholder="🔍 Filter maps...">
+                    <span id="modio-count">Loading maps...</span>
+                </div>
+                <div id="modio-grid" class="modio-thumbnail-grid">
+                    <div class="modio-loading-spinner">
+                        <div class="spinner"></div>
+                        <p>Loading maps...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer modio-footer">
+                <div class="bulk-download-section">
+                    <button id="btn-load-more" class="btn-bulk">🔄 Reload Maps</button>
+                </div>
+                <p class="modio-info">Maps from <a href="https://mod.io/g/trueskate" target="_blank">mod.io/g/trueskate</a> • Click a map to use as starter</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Local Maps Browser Modal -->
+    <div id="local-maps-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content modio-modal modio-fullscreen">
+            <div class="modal-header">
+                <h2>📂 Browse Local Maps</h2>
+                <p class="modal-subtitle">Click any map to use as your base!</p>
+                <button id="close-local-maps" class="modal-close">✕</button>
+            </div>
+            <div class="modal-body modio-grid-body">
+                <div class="modio-filter-bar">
+                    <input type="text" id="local-maps-filter" placeholder="🔍 Filter maps by name...">
+                    <span id="local-maps-count">Loading...</span>
+                </div>
+                <div id="local-maps-grid" class="modio-thumbnail-grid">
+                    <div class="modio-loading-spinner">
+                        <div class="spinner"></div>
+                        <p>Loading local maps...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer modio-footer">
+                <p class="modio-info">Maps from modio_maps/ folder • Click a map to use as starter</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 3D Model Import Modal -->
+    <div id="import-3d-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content import-3d-modal">
+            <div class="modal-header">
+                <h2>🏗️ Import 3D Model</h2>
+                <button id="close-import-3d" class="modal-close">✕</button>
+            </div>
+            <div class="modal-body import-3d-body">
+                <div class="import-3d-preview">
+                    <canvas id="import-preview-canvas"></canvas>
+                    <div id="import-preview-loading" class="preview-loading">
+                        <div class="spinner"></div>
+                        <p>Loading model...</p>
+                    </div>
+                </div>
+                <div class="import-3d-stats">
+                    <div class="stat-row">
+                        <span class="stat-label">File:</span>
+                        <span id="import-filename" class="stat-value">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Triangles:</span>
+                        <span id="import-polycount" class="stat-value">-</span>
+                        <span id="import-polycount-warning" class="stat-warning hidden">⚠️ High poly count</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Vertices:</span>
+                        <span id="import-vertcount" class="stat-value">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Materials:</span>
+                        <span id="import-matcount" class="stat-value">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Bounding Box:</span>
+                        <span id="import-dimensions" class="stat-value">-</span>
+                    </div>
+                </div>
+                
+                <div class="import-3d-options">
+                    <h3>Import Options</h3>
+                    
+                    <div class="option-group">
+                        <label class="option-label">Scale (1 unit = 1 meter)</label>
+                        <div class="option-row">
+                            <input type="number" id="import-scale" value="1" min="0.01" max="100" step="0.1">
+                            <button id="import-scale-auto" class="btn-small">Auto-detect</button>
+                        </div>
+                    </div>
+                    
+                    <div class="option-group">
+                        <label class="option-label">Simplify Mesh</label>
+                        <div class="simplify-controls">
+                            <input type="range" id="import-simplify" min="0" max="90" value="0">
+                            <span id="import-simplify-value">0%</span>
+                        </div>
+                        <div class="simplify-result">
+                            <span>Result: </span>
+                            <span id="import-simplified-count">-</span>
+                            <span> triangles</span>
+                        </div>
+                    </div>
+                    
+                    <div class="option-group">
+                        <label class="option-label">Surface Detection</label>
+                        <div class="detection-options">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="import-detect-flat" checked>
+                                <span>Detect flat ground (gray/horizontal)</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="import-detect-ramp" checked>
+                                <span>Detect ramps (angled surfaces)</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="import-detect-grind" checked>
+                                <span>Detect grind edges (rails/ledges)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer import-3d-footer">
+                <button id="import-3d-cancel" class="btn-secondary">Cancel</button>
+                <button id="import-3d-confirm" class="btn-primary">Import as Skateable Object</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
-
