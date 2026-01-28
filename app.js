@@ -15106,116 +15106,129 @@ function createRampGeometry(length, height, width) {
 }
 
 function createQuarterPipeEditorGeometry(height, width, segments, lipAngle) {
-    // Quarter pipe: curved arc from flat to lip angle
-    const radius = height; // radius = height for a proper quarter pipe
+    // Quarter pipe: flat bottom approach + curved transition + back wall
+    // A real quarter pipe profile: flat → arc curve → vertical wall
+    const radius = height;
     const angleMax = (lipAngle / 90) * (Math.PI / 2);
     const halfW = width / 2;
-    const numPts = segments + 1;
+    const flatLen = radius * 0.4; // flat approach = 40% of radius
 
-    // Generate curve profile points (in XY plane, X = depth, Y = height)
+    // Generate full profile: flat section + curved transition
+    // The curve center is at (flatLen + 0, radius) — the arc sweeps from
+    // pointing down (angle=0 → bottom of curve) to pointing left (angle=90° → top/lip)
     const profile = [];
-    for (let i = 0; i < numPts; i++) {
+    const numCurve = segments + 1;
+
+    // Flat section: 2 points at y=0
+    profile.push({ x: -flatLen, y: 0, nx: 0, ny: -1 });
+    profile.push({ x: 0, y: 0, nx: 0, ny: -1 });
+
+    // Curved section: arc from angle=0 (flat) sweeping up to angleMax
+    // Arc center is at x=0, y=radius. Arc point at angle a: x = radius*sin(a), y = radius - radius*cos(a)
+    for (let i = 0; i < numCurve; i++) {
         const t = i / segments;
-        const angle = angleMax * t;
-        const x = radius * Math.sin(angle);
-        const y = radius * (1 - Math.cos(angle));
-        // Normal perpendicular to the curve (pointing outward/upward)
-        const nx = -Math.sin(angle);
-        const ny = Math.cos(angle);
+        const a = angleMax * t;
+        const x = radius * Math.sin(a);
+        const y = radius * (1 - Math.cos(a));
+        // Surface normal points inward (toward the skater): perpendicular to curve, facing -radius direction
+        const nx = -Math.sin(a);
+        const ny = Math.cos(a);
         profile.push({ x, y, nx, ny });
     }
 
-    // Build BufferGeometry
+    const totalPts = profile.length;
+    const topX = profile[totalPts - 1].x;
+    const topY = profile[totalPts - 1].y;
+
     const positions = [];
     const normals = [];
     const uvs = [];
     const indices = [];
 
-    // Compute arc lengths for UV mapping
+    // Compute arc lengths along full profile for UV mapping
     const arcLengths = [0];
-    for (let i = 1; i < numPts; i++) {
+    for (let i = 1; i < totalPts; i++) {
         const dx = profile[i].x - profile[i-1].x;
         const dy = profile[i].y - profile[i-1].y;
         arcLengths.push(arcLengths[i-1] + Math.sqrt(dx*dx + dy*dy));
     }
-    const totalArc = arcLengths[numPts - 1];
+    const totalArc = arcLengths[totalPts - 1];
 
-    // Transition surface: 2 vertices per profile point (front and back edges)
-    for (let i = 0; i < numPts; i++) {
+    // === Skating surface (flat + curved transition) ===
+    for (let i = 0; i < totalPts; i++) {
         const p = profile[i];
         const u = totalArc > 0 ? arcLengths[i] / totalArc : 0;
-        // Front edge (z = -halfW)
         positions.push(p.x, p.y, -halfW);
         normals.push(p.nx, p.ny, 0);
         uvs.push(u, 0);
-        // Back edge (z = +halfW)
         positions.push(p.x, p.y, halfW);
         normals.push(p.nx, p.ny, 0);
         uvs.push(u, 1);
     }
-
-    // Transition surface triangles
-    for (let i = 0; i < segments; i++) {
+    for (let i = 0; i < totalPts - 1; i++) {
         const a = i * 2, b = i * 2 + 1, c = (i+1) * 2, d = (i+1) * 2 + 1;
         indices.push(a, c, b);
         indices.push(b, c, d);
     }
 
-    // Bottom face (flat, y=0)
-    const baseIdx = positions.length / 3;
-    const bottomLen = profile[0].x; // should be 0 for quarter pipe starting at origin
-    const topX = profile[numPts-1].x;
-    // Bottom quad: from x=0 to x=topX at y=0
-    positions.push(0, 0, -halfW);  normals.push(0, -1, 0); uvs.push(0, 0);
-    positions.push(0, 0, halfW);   normals.push(0, -1, 0); uvs.push(0, 1);
-    positions.push(topX, 0, -halfW); normals.push(0, -1, 0); uvs.push(1, 0);
-    positions.push(topX, 0, halfW);  normals.push(0, -1, 0); uvs.push(1, 1);
-    indices.push(baseIdx, baseIdx+1, baseIdx+2);
-    indices.push(baseIdx+1, baseIdx+3, baseIdx+2);
+    // === Bottom face (underside at y=0, from -flatLen to topX) ===
+    const bi = positions.length / 3;
+    positions.push(-flatLen, 0, -halfW); normals.push(0, -1, 0); uvs.push(0, 0);
+    positions.push(-flatLen, 0, halfW);  normals.push(0, -1, 0); uvs.push(0, 1);
+    positions.push(topX, 0, -halfW);     normals.push(0, -1, 0); uvs.push(1, 0);
+    positions.push(topX, 0, halfW);      normals.push(0, -1, 0); uvs.push(1, 1);
+    indices.push(bi, bi+1, bi+2);
+    indices.push(bi+1, bi+3, bi+2);
 
-    // Back wall (vertical face at x=topX from y=0 to y=topY)
-    const topY = profile[numPts-1].y;
-    const wallIdx = positions.length / 3;
+    // === Back wall (vertical face at x=topX from y=0 to y=topY) ===
+    const wi = positions.length / 3;
     positions.push(topX, 0, -halfW);    normals.push(1, 0, 0); uvs.push(0, 0);
     positions.push(topX, 0, halfW);     normals.push(1, 0, 0); uvs.push(1, 0);
-    positions.push(topX, topY, -halfW);  normals.push(1, 0, 0); uvs.push(0, 1);
-    positions.push(topX, topY, halfW);   normals.push(1, 0, 0); uvs.push(1, 1);
-    indices.push(wallIdx, wallIdx+2, wallIdx+1);
-    indices.push(wallIdx+1, wallIdx+2, wallIdx+3);
+    positions.push(topX, topY, -halfW); normals.push(1, 0, 0); uvs.push(0, 1);
+    positions.push(topX, topY, halfW);  normals.push(1, 0, 0); uvs.push(1, 1);
+    indices.push(wi, wi+2, wi+1);
+    indices.push(wi+1, wi+2, wi+3);
 
-    // Side faces (triangulated profile shape on each side)
-    // Left side (z = -halfW)
-    const leftIdx = positions.length / 3;
-    for (let i = 0; i < numPts; i++) {
+    // === Front wall (vertical face at x=-flatLen, small height for the flat section edge) ===
+    // Only needed if flat section exists
+    if (flatLen > 0) {
+        const fi = positions.length / 3;
+        positions.push(-flatLen, 0, -halfW);    normals.push(-1, 0, 0); uvs.push(0, 0);
+        positions.push(-flatLen, 0, halfW);     normals.push(-1, 0, 0); uvs.push(1, 0);
+    }
+
+    // === Side faces (left z=-halfW, right z=+halfW) ===
+    // Left side panel
+    const li = positions.length / 3;
+    // Add all profile points on left side
+    for (let i = 0; i < totalPts; i++) {
         positions.push(profile[i].x, profile[i].y, -halfW);
         normals.push(0, 0, -1);
-        uvs.push(profile[i].x / topX, profile[i].y / topY);
+        uvs.push((profile[i].x + flatLen) / (topX + flatLen), profile[i].y / (topY || 1));
     }
-    // Add bottom-back corner
+    // Add bottom-back corner to close the shape
     positions.push(topX, 0, -halfW);
     normals.push(0, 0, -1);
     uvs.push(1, 0);
-    // Triangulate left side as a fan from first point
-    for (let i = 1; i < numPts; i++) {
-        indices.push(leftIdx, leftIdx + i, leftIdx + i + 1 <= leftIdx + numPts ? leftIdx + i + 1 : leftIdx + numPts);
+    // Fan triangulation from first point (bottom-left corner at -flatLen, 0)
+    const leftVerts = totalPts + 1; // profile pts + bottom-back corner
+    for (let i = 1; i < leftVerts - 1; i++) {
+        indices.push(li, li + i, li + i + 1);
     }
-    // Last triangle connecting to bottom-back corner
-    indices.push(leftIdx, leftIdx + numPts - 1, leftIdx + numPts);
 
-    // Right side (z = +halfW) - same but mirrored winding
-    const rightIdx = positions.length / 3;
-    for (let i = 0; i < numPts; i++) {
+    // Right side panel
+    const ri = positions.length / 3;
+    for (let i = 0; i < totalPts; i++) {
         positions.push(profile[i].x, profile[i].y, halfW);
         normals.push(0, 0, 1);
-        uvs.push(profile[i].x / topX, profile[i].y / topY);
+        uvs.push((profile[i].x + flatLen) / (topX + flatLen), profile[i].y / (topY || 1));
     }
     positions.push(topX, 0, halfW);
     normals.push(0, 0, 1);
     uvs.push(1, 0);
-    for (let i = 1; i < numPts; i++) {
-        indices.push(rightIdx, rightIdx + i + 1 <= rightIdx + numPts ? rightIdx + i + 1 : rightIdx + numPts, rightIdx + i);
+    for (let i = 1; i < leftVerts - 1; i++) {
+        indices.push(ri, ri + i + 1, ri + i);
     }
-    indices.push(rightIdx, rightIdx + numPts, rightIdx + numPts - 1);
 
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -15353,22 +15366,47 @@ function createKickerEditorGeometry(length, height, width, segments, lipAngle) {
 }
 
 function createSpineEditorGeometry(height, width, segments, lipAngle) {
-    // Spine: two quarter pipes mirrored back-to-back
+    // Spine: two quarter pipes mirrored, joined at center with flat bottom sections
     const radius = height;
     const angleMax = (lipAngle / 90) * (Math.PI / 2);
     const halfW = width / 2;
-    const numPts = segments + 1;
+    const numCurve = segments + 1;
+    const flatLen = radius * 0.3; // flat section on each side
 
-    const profile = [];
-    for (let i = 0; i < numPts; i++) {
+    // Generate curve profile (one side, from center outward)
+    const curveProfile = [];
+    for (let i = 0; i < numCurve; i++) {
         const t = i / segments;
-        const angle = angleMax * t;
-        profile.push({
-            x: radius * Math.sin(angle),
-            y: radius * (1 - Math.cos(angle)),
-            nx: -Math.sin(angle),
-            ny: Math.cos(angle)
+        const a = angleMax * t;
+        curveProfile.push({
+            x: radius * Math.sin(a),
+            y: radius * (1 - Math.cos(a)),
+            nx: -Math.sin(a),
+            ny: Math.cos(a)
         });
+    }
+    const topX = curveProfile[numCurve - 1].x;
+    const topY = curveProfile[numCurve - 1].y;
+
+    // Build full profile for right side: flat at y=0 from (topX+flatLen) down to (topX), then curve back to center (0)
+    // Right side profile: flat approach → curve → center
+    const rightProfile = [];
+    // Flat section (going from far right toward the curve start)
+    rightProfile.push({ x: topX + flatLen, y: 0, nx: 0, ny: -1 });
+    rightProfile.push({ x: topX, y: 0, nx: 0, ny: -1 });
+    // Curve section (reversed: from bottom of curve up to the lip at center)
+    for (let i = 0; i < numCurve; i++) {
+        const p = curveProfile[i];
+        rightProfile.push({ x: p.x, y: p.y, nx: p.nx, ny: p.ny });
+    }
+
+    // Left side is mirrored
+    const leftProfile = [];
+    leftProfile.push({ x: -(topX + flatLen), y: 0, nx: 0, ny: -1 });
+    leftProfile.push({ x: -topX, y: 0, nx: 0, ny: -1 });
+    for (let i = 0; i < numCurve; i++) {
+        const p = curveProfile[i];
+        leftProfile.push({ x: -p.x, y: p.y, nx: p.nx, ny: p.ny });
     }
 
     const positions = [];
@@ -15376,40 +15414,72 @@ function createSpineEditorGeometry(height, width, segments, lipAngle) {
     const uvsArr = [];
     const idxs = [];
 
-    // Left quarter (mirrored: x negated)
-    for (let i = 0; i < numPts; i++) {
-        const p = profile[i];
-        positions.push(-p.x, p.y, -halfW); normalsArr.push(-p.nx, p.ny, 0); uvsArr.push(i/segments, 0);
-        positions.push(-p.x, p.y, halfW);  normalsArr.push(-p.nx, p.ny, 0); uvsArr.push(i/segments, 1);
-    }
-    for (let i = 0; i < segments; i++) {
-        const a = i*2, b = i*2+1, c = (i+1)*2, d = (i+1)*2+1;
-        idxs.push(a, b, c);
-        idxs.push(b, d, c);
-    }
-
-    // Right quarter (normal direction)
-    const offset = positions.length / 3;
-    for (let i = 0; i < numPts; i++) {
-        const p = profile[i];
-        positions.push(p.x, p.y, -halfW); normalsArr.push(p.nx, p.ny, 0); uvsArr.push(i/segments, 0);
-        positions.push(p.x, p.y, halfW);  normalsArr.push(p.nx, p.ny, 0); uvsArr.push(i/segments, 1);
-    }
-    for (let i = 0; i < segments; i++) {
-        const a = offset+i*2, b = offset+i*2+1, c = offset+(i+1)*2, d = offset+(i+1)*2+1;
-        idxs.push(a, c, b);
-        idxs.push(b, c, d);
+    // Helper to add a surface strip from a profile
+    function addSurface(prof, flipNx) {
+        const base = positions.length / 3;
+        const n = prof.length;
+        for (let i = 0; i < n; i++) {
+            const p = prof[i];
+            const nxSign = flipNx ? -1 : 1;
+            positions.push(p.x, p.y, -halfW); normalsArr.push(nxSign * p.nx, p.ny, 0); uvsArr.push(i/(n-1), 0);
+            positions.push(p.x, p.y, halfW);  normalsArr.push(nxSign * p.nx, p.ny, 0); uvsArr.push(i/(n-1), 1);
+        }
+        for (let i = 0; i < n - 1; i++) {
+            const a = base+i*2, b = base+i*2+1, c = base+(i+1)*2, d = base+(i+1)*2+1;
+            if (flipNx) {
+                idxs.push(a, b, c);
+                idxs.push(b, d, c);
+            } else {
+                idxs.push(a, c, b);
+                idxs.push(b, c, d);
+            }
+        }
     }
 
-    // Bottom face
-    const topX = profile[numPts-1].x;
+    // Left side surface (mirrored normals)
+    addSurface(leftProfile, true);
+    // Right side surface
+    addSurface(rightProfile, false);
+
+    // Bottom face (underside)
+    const outerX = topX + flatLen;
     const bi = positions.length / 3;
-    positions.push(-topX, 0, -halfW); normalsArr.push(0, -1, 0); uvsArr.push(0, 0);
-    positions.push(-topX, 0, halfW);  normalsArr.push(0, -1, 0); uvsArr.push(0, 1);
-    positions.push(topX, 0, -halfW);  normalsArr.push(0, -1, 0); uvsArr.push(1, 0);
-    positions.push(topX, 0, halfW);   normalsArr.push(0, -1, 0); uvsArr.push(1, 1);
+    positions.push(-outerX, 0, -halfW); normalsArr.push(0, -1, 0); uvsArr.push(0, 0);
+    positions.push(-outerX, 0, halfW);  normalsArr.push(0, -1, 0); uvsArr.push(0, 1);
+    positions.push(outerX, 0, -halfW);  normalsArr.push(0, -1, 0); uvsArr.push(1, 0);
+    positions.push(outerX, 0, halfW);   normalsArr.push(0, -1, 0); uvsArr.push(1, 1);
     idxs.push(bi, bi+1, bi+2);
     idxs.push(bi+1, bi+3, bi+2);
+
+    // Side panels (left z=-halfW, right z=+halfW)
+    // Build full outline for side panels: left flat → left curve → right curve → right flat → back to start
+    const outline = [];
+    for (let i = 0; i < leftProfile.length; i++) outline.push(leftProfile[i]);
+    // Right profile is reversed (we go from center back out to the right)
+    for (let i = rightProfile.length - 1; i >= 0; i--) outline.push(rightProfile[i]);
+
+    // Left side panel (z = -halfW)
+    const si = positions.length / 3;
+    for (let i = 0; i < outline.length; i++) {
+        positions.push(outline[i].x, outline[i].y, -halfW);
+        normalsArr.push(0, 0, -1);
+        uvsArr.push((outline[i].x + outerX) / (2 * outerX), outline[i].y / (topY || 1));
+    }
+    // Fan triangulation from bottom-left corner
+    for (let i = 1; i < outline.length - 1; i++) {
+        idxs.push(si, si + i, si + i + 1);
+    }
+
+    // Right side panel (z = +halfW)
+    const si2 = positions.length / 3;
+    for (let i = 0; i < outline.length; i++) {
+        positions.push(outline[i].x, outline[i].y, halfW);
+        normalsArr.push(0, 0, 1);
+        uvsArr.push((outline[i].x + outerX) / (2 * outerX), outline[i].y / (topY || 1));
+    }
+    for (let i = 1; i < outline.length - 1; i++) {
+        idxs.push(si2, si2 + i + 1, si2 + i);
+    }
 
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
