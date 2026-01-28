@@ -3839,6 +3839,13 @@ async function importMapFromZip(file) {
         }
     }
     
+    // Detect DIY object packs (modObjectInfoList in _mod.json) and redirect
+    if (!placementData && modJson && modJson.modObjectInfoList) {
+        console.log('📦 Detected DIY object pack, redirecting to loadDIYPack...');
+        await loadDIYPack(file);
+        return;
+    }
+
     if (placementData) {
         clearScene();
         // Process placement data similar to warehouse
