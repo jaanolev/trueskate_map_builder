@@ -14622,7 +14622,8 @@ const editorState = {
         rampType: 'quarter-pipe',
         curveSegments: 16,
         copingEnabled: true,
-        lipAngle: 90
+        lipAngle: 90,
+        pyramidTopSize: 70  // percentage of base size that forms the flat top plateau
     },
     materials: {
         concrete: { color: 0x666666, roughness: 0.9 },
@@ -14654,6 +14655,9 @@ const editorState = {
             { name: 'Small Kicker', rampType: 'kicker', height: 30, length: 100, width: 80, curveSegments: 12, lipAngle: 25 },
             { name: 'Launch Kicker', rampType: 'kicker', height: 50, length: 120, width: 100, curveSegments: 12, lipAngle: 40 },
             { name: 'Mini Spine', rampType: 'spine', height: 80, width: 120, curveSegments: 16, copingEnabled: true, lipAngle: 90 },
+            { name: 'Low Pyramid', rampType: 'pyramid', height: 25, length: 300, width: 300, pyramidTopSize: 75 },
+            { name: 'Contest Pyramid', rampType: 'pyramid', height: 40, length: 400, width: 400, pyramidTopSize: 70 },
+            { name: 'Steep Pyramid', rampType: 'pyramid', height: 60, length: 250, width: 250, pyramidTopSize: 55 },
         ],
         stairs: [
             { name: '3 Stair', steps: 3, height: 45 },
@@ -14752,9 +14756,16 @@ function setupEditorListeners() {
             document.querySelectorAll('.ramp-type-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             editorState.settings.rampType = btn.dataset.rampType;
-            // Show/hide lip angle based on sub-type (banks don't need it)
+            // Show/hide controls based on sub-type
             const lipControl = document.getElementById('lip-angle-control');
-            if (lipControl) lipControl.style.display = btn.dataset.rampType === 'bank' ? 'none' : '';
+            const pyramidTopControl = document.getElementById('pyramid-top-control');
+            const curveControl = document.getElementById('edit-curve-segments');
+            const isPyramid = btn.dataset.rampType === 'pyramid';
+            const isBank = btn.dataset.rampType === 'bank';
+            if (lipControl) lipControl.style.display = (isBank || isPyramid) ? 'none' : '';
+            if (pyramidTopControl) pyramidTopControl.style.display = isPyramid ? '' : 'none';
+            // Hide curve smoothness for pyramid and bank
+            if (curveControl && curveControl.parentElement) curveControl.parentElement.style.display = (isPyramid || isBank) ? 'none' : '';
             updateEditorObject();
         });
     });
@@ -14780,6 +14791,14 @@ function setupEditorListeners() {
     if (copingCheckbox) {
         copingCheckbox.addEventListener('change', () => {
             editorState.settings.copingEnabled = copingCheckbox.checked;
+            updateEditorObject();
+        });
+    }
+    const pyramidTopSlider = document.getElementById('edit-pyramid-top');
+    if (pyramidTopSlider) {
+        pyramidTopSlider.addEventListener('input', () => {
+            editorState.settings.pyramidTopSize = parseInt(pyramidTopSlider.value);
+            document.getElementById('pyramid-top-value').textContent = pyramidTopSlider.value;
             updateEditorObject();
         });
     }
@@ -14972,7 +14991,13 @@ function applyPreset(preset) {
             btn.classList.toggle('active', btn.dataset.rampType === preset.rampType);
         });
         const lipControl = document.getElementById('lip-angle-control');
-        if (lipControl) lipControl.style.display = preset.rampType === 'bank' ? 'none' : '';
+        const pyramidTopControl = document.getElementById('pyramid-top-control');
+        const curveParent = document.getElementById('edit-curve-segments');
+        const isPyramid = preset.rampType === 'pyramid';
+        const isBank = preset.rampType === 'bank';
+        if (lipControl) lipControl.style.display = (isBank || isPyramid) ? 'none' : '';
+        if (pyramidTopControl) pyramidTopControl.style.display = isPyramid ? '' : 'none';
+        if (curveParent && curveParent.parentElement) curveParent.parentElement.style.display = (isPyramid || isBank) ? 'none' : '';
     }
     if (preset.curveSegments !== undefined) {
         editorState.settings.curveSegments = preset.curveSegments;
@@ -14992,6 +15017,13 @@ function applyPreset(preset) {
         editorState.settings.copingEnabled = preset.copingEnabled;
         const checkbox = document.getElementById('coping-enabled');
         if (checkbox) checkbox.checked = preset.copingEnabled;
+    }
+    if (preset.pyramidTopSize !== undefined) {
+        editorState.settings.pyramidTopSize = preset.pyramidTopSize;
+        const slider = document.getElementById('edit-pyramid-top');
+        const display = document.getElementById('pyramid-top-value');
+        if (slider) slider.value = preset.pyramidTopSize;
+        if (display) display.textContent = preset.pyramidTopSize;
     }
 
     updateEditorObject();
@@ -15070,6 +15102,20 @@ function updateEditorObject() {
             mesh.add(new THREE.Line(edgeGeo2, edgeMat));
         } else if (rampType === 'kicker') {
             points = [new THREE.Vector3(l/2, h, -w/2), new THREE.Vector3(l/2, h, w/2)];
+        } else if (rampType === 'pyramid') {
+            // All 4 top edges of pyramid
+            const topFrac = (editorState.settings.pyramidTopSize || 70) / 100;
+            const thl = l / 2 * topFrac;
+            const thw = w / 2 * topFrac;
+            // Front edge
+            points = [new THREE.Vector3(-thl, h, thw), new THREE.Vector3(thl, h, thw)];
+            // Back, right, left edges
+            const backPts = [new THREE.Vector3(thl, h, -thw), new THREE.Vector3(-thl, h, -thw)];
+            const rightPts = [new THREE.Vector3(thl, h, thw), new THREE.Vector3(thl, h, -thw)];
+            const leftPts = [new THREE.Vector3(-thl, h, -thw), new THREE.Vector3(-thl, h, thw)];
+            mesh.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(backPts), edgeMat));
+            mesh.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(rightPts), edgeMat));
+            mesh.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(leftPts), edgeMat));
         } else {
             points = [new THREE.Vector3(lipX, lipY, -w/2), new THREE.Vector3(lipX, lipY, w/2)];
         }
@@ -15091,7 +15137,7 @@ function updateEditorObject() {
 }
 
 function createRampGeometry(length, height, width) {
-    const { rampType, curveSegments, lipAngle } = editorState.settings;
+    const { rampType, curveSegments, lipAngle, pyramidTopSize } = editorState.settings;
     switch (rampType) {
         case 'quarter-pipe':
             return createQuarterPipeEditorGeometry(height, width, curveSegments, lipAngle);
@@ -15101,6 +15147,8 @@ function createRampGeometry(length, height, width) {
             return createKickerEditorGeometry(length, height, width, curveSegments, lipAngle);
         case 'spine':
             return createSpineEditorGeometry(height, width, curveSegments, lipAngle);
+        case 'pyramid':
+            return createPyramidEditorGeometry(length, height, width, pyramidTopSize);
         default:
             return createQuarterPipeEditorGeometry(height, width, curveSegments, lipAngle);
     }
@@ -15372,6 +15420,84 @@ function createSpineEditorGeometry(height, width, segments, lipAngle) {
     return geo;
 }
 
+function createPyramidEditorGeometry(length, height, width, topSizePercent) {
+    // Frustum pyramid: wide base with flat top plateau.
+    // Uses THREE.BufferGeometry with manual vertices for a clean frustum shape.
+    //
+    // Side profile:  flat top plateau
+    //                /‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
+    //               / sloped sides     \
+    //              /____________________\  base
+    //
+    const topFrac = (topSizePercent || 70) / 100;
+    const halfL = length / 2;
+    const halfW = width / 2;
+    const topHalfL = halfL * topFrac;
+    const topHalfW = halfW * topFrac;
+
+    // 8 corners of the frustum (4 base + 4 top)
+    // Base corners at y=0
+    const b0 = [-halfL, 0, -halfW]; // back-left
+    const b1 = [ halfL, 0, -halfW]; // back-right
+    const b2 = [ halfL, 0,  halfW]; // front-right
+    const b3 = [-halfL, 0,  halfW]; // front-left
+    // Top corners at y=height
+    const t0 = [-topHalfL, height, -topHalfW]; // back-left
+    const t1 = [ topHalfL, height, -topHalfW]; // back-right
+    const t2 = [ topHalfL, height,  topHalfW]; // front-right
+    const t3 = [-topHalfL, height,  topHalfW]; // front-left
+
+    const positions = [];
+    const normals = [];
+    const uvs = [];
+    const indices = [];
+
+    function addQuad(p0, p1, p2, p3, normal, u0, v0, u1, v1, u2, v2, u3, v3) {
+        const base = positions.length / 3;
+        positions.push(...p0, ...p1, ...p2, ...p3);
+        normals.push(...normal, ...normal, ...normal, ...normal);
+        uvs.push(u0, v0, u1, v1, u2, v2, u3, v3);
+        indices.push(base, base+1, base+2, base, base+2, base+3);
+    }
+
+    // Helper to calculate face normal from 3 points
+    function faceNormal(a, b, c) {
+        const ax = b[0]-a[0], ay = b[1]-a[1], az = b[2]-a[2];
+        const bx = c[0]-a[0], by = c[1]-a[1], bz = c[2]-a[2];
+        let nx = ay*bz - az*by, ny = az*bx - ax*bz, nz = ax*by - ay*bx;
+        const len = Math.sqrt(nx*nx + ny*ny + nz*nz) || 1;
+        return [nx/len, ny/len, nz/len];
+    }
+
+    // Top face (flat plateau) - skateable
+    addQuad(t0, t1, t2, t3, [0, 1, 0], 0, 0, 1, 0, 1, 1, 0, 1);
+
+    // Front slope (+Z face): b3, b2, t2, t3
+    const nFront = faceNormal(b3, b2, t3);
+    addQuad(b3, b2, t2, t3, nFront, 0, 0, 1, 0, 1, 1, 0, 1);
+
+    // Back slope (-Z face): b1, b0, t0, t1
+    const nBack = faceNormal(b1, b0, t1);
+    addQuad(b1, b0, t0, t1, nBack, 0, 0, 1, 0, 1, 1, 0, 1);
+
+    // Right slope (+X face): b2, b1, t1, t2
+    const nRight = faceNormal(b2, b1, t2);
+    addQuad(b2, b1, t1, t2, nRight, 0, 0, 1, 0, 1, 1, 0, 1);
+
+    // Left slope (-X face): b0, b3, t3, t0
+    const nLeft = faceNormal(b0, b3, t0);
+    addQuad(b0, b3, t3, t0, nLeft, 0, 0, 1, 0, 1, 1, 0, 1);
+
+    // No bottom face (sits on ground, would z-fight)
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geo.setIndex(indices);
+    return geo;
+}
+
 function createStairsGeometry(length, height, width, steps) {
     const group = new THREE.Group();
     const stepHeight = height / steps;
@@ -15482,6 +15608,11 @@ function addEditorObjectToMap() {
                     rampProps.radius = height / 100;
                     rampProps.width = width / 100;
                     rampProps.gap = 0; // spine has no gap
+                    break;
+                case 'pyramid':
+                    defKey = 'pyramid';
+                    rampProps.size = Math.max(length, width) / 100;
+                    rampProps.height = height / 100;
                     break;
                 default:
                     defKey = 'quarter-pipe';
@@ -15792,6 +15923,31 @@ function generateDIYFromEditorObject(name) {
         colPolys.push({ sides: leftIndices.length, attr: 0, indices: leftIndices });
         colPolys.push({ sides: rightIndices.length, attr: 0, indices: rightIndices.slice().reverse() });
 
+    } else if (isRamp && settings.rampType === 'pyramid') {
+        // Pyramid frustum collision: flat top + 4 sloped sides
+        const topPct = (settings.pyramidTopSize || 70) / 100;
+        const hh = (height / 100) * scale;
+        const hl = (length / 200) * scale;
+        const hw2 = hw; // already half-width
+        const thl = hl * topPct;  // top half-length
+        const thw = hw2 * topPct; // top half-width
+        // 8 vertices: 4 base (y=0) + 4 top (y=hh)
+        colVerts.push([-hl, 0, -hw2]);  // 0 base back-left
+        colVerts.push([ hl, 0, -hw2]);  // 1 base back-right
+        colVerts.push([ hl, 0,  hw2]);  // 2 base front-right
+        colVerts.push([-hl, 0,  hw2]);  // 3 base front-left
+        colVerts.push([-thl, hh, -thw]); // 4 top back-left
+        colVerts.push([ thl, hh, -thw]); // 5 top back-right
+        colVerts.push([ thl, hh,  thw]); // 6 top front-right
+        colVerts.push([-thl, hh,  thw]); // 7 top front-left
+        // Top face (flat, skateable)
+        colPolys.push({ sides: 4, attr: 1310720, indices: [4, 5, 6, 7] });
+        // 4 sloped sides (ramp attribute)
+        colPolys.push({ sides: 4, attr: 2097152, indices: [3, 2, 6, 7] }); // front
+        colPolys.push({ sides: 4, attr: 2097152, indices: [1, 0, 4, 5] }); // back
+        colPolys.push({ sides: 4, attr: 2097152, indices: [2, 1, 5, 6] }); // right
+        colPolys.push({ sides: 4, attr: 2097152, indices: [0, 3, 7, 4] }); // left
+
     } else {
         // Default: simple box collision
         const hh = (height / 200) * scale;
@@ -15869,6 +16025,20 @@ function generateDIYFromEditorObject(name) {
             const lipY = radius * (1 - Math.cos(angleMax));
             edges.push({ x1: -lipX, y1: lipY, z1: -hw, x2: -lipX, y2: lipY, z2: hw });
             edges.push({ x1: lipX, y1: lipY, z1: -hw, x2: lipX, y2: lipY, z2: hw });
+        } else if (rampType === 'pyramid') {
+            // All 4 top edges of the pyramid are grindable
+            const topPct = (settings.pyramidTopSize || 70) / 100;
+            const hh = (height / 100) * scale;
+            const thl = (length / 200) * scale * topPct;
+            const thw = hw * topPct;
+            // Front edge
+            edges.push({ x1: -thl, y1: hh, z1: thw, x2: thl, y2: hh, z2: thw });
+            // Back edge
+            edges.push({ x1: thl, y1: hh, z1: -thw, x2: -thl, y2: hh, z2: -thw });
+            // Right edge
+            edges.push({ x1: thl, y1: hh, z1: thw, x2: thl, y2: hh, z2: -thw });
+            // Left edge
+            edges.push({ x1: -thl, y1: hh, z1: -thw, x2: -thl, y2: hh, z2: thw });
         }
     } else if (!isRamp && settings.grindTop) {
         const hh = (height / 100) * scale;

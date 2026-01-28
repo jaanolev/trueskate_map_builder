@@ -637,7 +637,7 @@
         }
     }
     </script>
-    <script type="module" src="app.js?v=20260129-qp-extrude"></script>
+    <script type="module" src="app.js?v=20260129-pyramid"></script>
     
     <!-- Object Editor Mode -->
     <div id="object-editor" class="hidden">
@@ -709,6 +709,10 @@
                         <button class="ramp-type-btn" data-ramp-type="spine">
                             <span class="ramp-icon">&#8896;</span>
                             <span>SPINE</span>
+                        </button>
+                        <button class="ramp-type-btn" data-ramp-type="pyramid">
+                            <span class="ramp-icon">&#9651;</span>
+                            <span>PYRAMID</span>
                         </button>
                     </div>
                 </div>
@@ -834,6 +838,11 @@
                             <input type="checkbox" id="coping-enabled" checked>
                             <span class="grind-label">Metal Coping (grindable lip)</span>
                         </label>
+                        <div class="skater-slider" id="pyramid-top-control" style="display:none">
+                            <label>Top Plateau Size</label>
+                            <input type="range" id="edit-pyramid-top" min="10" max="95" value="70">
+                            <div class="slider-value"><span id="pyramid-top-value">70</span>%</div>
+                        </div>
                     </div>
 
                     <div class="editor-section">
