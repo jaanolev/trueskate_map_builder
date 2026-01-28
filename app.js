@@ -15057,8 +15057,9 @@ function updateEditorObject() {
         // Show coping at the lip of the ramp
         const edgeMat = new THREE.LineBasicMaterial({ color: 0x00ff88, linewidth: 2 });
         const rampType = editorState.settings.rampType;
-        const radius = h;
-        const angleMax = (editorState.settings.lipAngle / 90) * (Math.PI / 2);
+        const radius = h * 1.8;
+        const lipAngleRad = (editorState.settings.lipAngle / 90) * (Math.PI / 2);
+        const angleMax = Math.min(lipAngleRad, Math.acos(1 - h / radius));
         const lipX = radius * Math.sin(angleMax);
         const lipY = radius * (1 - Math.cos(angleMax));
         let points;
@@ -15106,16 +15107,21 @@ function createRampGeometry(length, height, width) {
 }
 
 function createQuarterPipeEditorGeometry(height, width, segments, lipAngle) {
-    // Quarter pipe: flat bottom approach + curved transition + back wall
-    // A real quarter pipe profile: flat → arc curve → vertical wall
-    const radius = height;
-    const angleMax = (lipAngle / 90) * (Math.PI / 2);
+    // Quarter pipe: flat bottom approach + curved transition + vertical back wall
+    // Radius is larger than height to create a proper concave bowl shape.
+    // The curve sweeps up to where it naturally ends, then a vertical wall
+    // extends to the full height — just like a real quarter pipe.
+    const radius = height * 1.8; // larger radius = more dramatic concave curve
     const halfW = width / 2;
-    const flatLen = radius * 0.4; // flat approach = 40% of radius
+    const flatLen = height * 0.5; // flat approach section
 
-    // Generate full profile: flat section + curved transition
-    // The curve center is at (flatLen + 0, radius) — the arc sweeps from
-    // pointing down (angle=0 → bottom of curve) to pointing left (angle=90° → top/lip)
+    // Calculate the max angle the arc needs to sweep to reach the full height
+    // Arc formula: y = radius * (1 - cos(a)), solve for a when y = height
+    // a = acos(1 - height/radius)
+    const maxPossibleAngle = Math.acos(1 - height / radius);
+    const lipAngleRad = (lipAngle / 90) * (Math.PI / 2);
+    const angleMax = Math.min(lipAngleRad, maxPossibleAngle);
+
     const profile = [];
     const numCurve = segments + 1;
 
@@ -15123,14 +15129,12 @@ function createQuarterPipeEditorGeometry(height, width, segments, lipAngle) {
     profile.push({ x: -flatLen, y: 0, nx: 0, ny: -1 });
     profile.push({ x: 0, y: 0, nx: 0, ny: -1 });
 
-    // Curved section: arc from angle=0 (flat) sweeping up to angleMax
-    // Arc center is at x=0, y=radius. Arc point at angle a: x = radius*sin(a), y = radius - radius*cos(a)
+    // Curved section: arc from angle=0 (flat) sweeping up
     for (let i = 0; i < numCurve; i++) {
         const t = i / segments;
         const a = angleMax * t;
         const x = radius * Math.sin(a);
         const y = radius * (1 - Math.cos(a));
-        // Surface normal points inward (toward the skater): perpendicular to curve, facing -radius direction
         const nx = -Math.sin(a);
         const ny = Math.cos(a);
         profile.push({ x, y, nx, ny });
@@ -15367,11 +15371,15 @@ function createKickerEditorGeometry(length, height, width, segments, lipAngle) {
 
 function createSpineEditorGeometry(height, width, segments, lipAngle) {
     // Spine: two quarter pipes mirrored, joined at center with flat bottom sections
-    const radius = height;
-    const angleMax = (lipAngle / 90) * (Math.PI / 2);
+    const radius = height * 1.8; // larger radius for proper concave curve
     const halfW = width / 2;
     const numCurve = segments + 1;
-    const flatLen = radius * 0.3; // flat section on each side
+    const flatLen = height * 0.4; // flat section on each side
+
+    // Calculate max angle to reach the full height
+    const maxPossibleAngle = Math.acos(1 - height / radius);
+    const lipAngleRad = (lipAngle / 90) * (Math.PI / 2);
+    const angleMax = Math.min(lipAngleRad, maxPossibleAngle);
 
     // Generate curve profile (one side, from center outward)
     const curveProfile = [];
